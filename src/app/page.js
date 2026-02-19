@@ -4,13 +4,6 @@ import { useEffect, useMemo, useState } from "react";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
 
-// simple local thumbnails (optional). If missing, UI falls back gracefully.
-const THUMB_BY_ID = {
-  1: "/events/1.jpg",
-  2: "/events/2.jpg",
-  3: "/events/3.jpg",
-};
-
 function formatDatePretty(iso) {
   try {
     const d = new Date(iso);
@@ -24,15 +17,18 @@ export default function Home() {
   const [meets, setMeets] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [mode, setMode] = useState(null); // null | "find" | "host"
 
-  // filters
-  const [q, setQ] = useState("");
-  const [city, setCity] = useState("All Cities");
-  const [type, setType] = useState("All Types");
+  // search + filters
+  const [location, setLocation] = useState("");
+  const [showFilters, setShowFilters] = useState(false);
+  const [eventType, setEventType] = useState("All Types");
+  const [radius, setRadius] = useState("25 mi");
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
+  const [searched, setSearched] = useState(false);
 
-  // pagination (Bubble-style footer)
+  // pagination
   const PAGE_SIZE = 6;
   const [page, setPage] = useState(1);
 
@@ -40,7 +36,6 @@ export default function Home() {
     async function load() {
       setLoading(true);
       setError("");
-
       try {
         const res = await fetch(`${API_BASE}/meets`, { cache: "no-store" });
         if (!res.ok) throw new Error(`API error: ${res.status}`);
@@ -52,438 +47,428 @@ export default function Home() {
         setLoading(false);
       }
     }
-
     load();
   }, []);
 
-  const cities = useMemo(() => {
-    const set = new Set(meets.map((m) => m.city).filter(Boolean));
-    return ["All Cities", ...Array.from(set)];
-  }, [meets]);
-
-  // Since your backend doesn’t have `type` yet, we keep the dropdown for the Bubble layout,
-  // but it won’t filter until you add type to the API.
-  const types = ["All Types", "Cars & Coffee", "Night Meet", "Cruise", "Show", "Track Day"];
+  const EVENT_TYPES = ["All Types", "Cars & Coffee", "Night Meet", "Cruise", "Show", "Track Day"];
+  const RADII = ["5 mi", "10 mi", "25 mi", "50 mi", "100 mi"];
 
   const filtered = useMemo(() => {
     let list = [...meets];
-
-    // city filter
-    if (city !== "All Cities") {
-      list = list.filter((m) => (m.city || "").toLowerCase() === city.toLowerCase());
+    if (location.trim()) {
+      const needle = location.trim().toLowerCase();
+      list = list.filter((m) =>
+        `${m.city || ""} ${m.title || ""}`.toLowerCase().includes(needle)
+      );
     }
-
-    // search filter
-    if (q.trim()) {
-      const needle = q.trim().toLowerCase();
-      list = list.filter((m) => {
-        const hay = `${m.title || ""} ${m.city || ""} ${m.date || ""}`.toLowerCase();
-        return hay.includes(needle);
-      });
+    if (eventType !== "All Types") {
+      list = list.filter((m) => (m.type || "").toLowerCase() === eventType.toLowerCase());
     }
-
-    // date range filter (ISO date string in backend)
-    if (dateFrom) {
-      list = list.filter((m) => (m.date || "") >= dateFrom);
-    }
-    if (dateTo) {
-      list = list.filter((m) => (m.date || "") <= dateTo);
-    }
-
-    // type filter (placeholder until backend supports it)
-    if (type !== "All Types") {
-      // no-op for now (keeps layout consistent with Bubble)
-      // later: list = list.filter(m => (m.type||"").toLowerCase() === type.toLowerCase())
-    }
-
+    if (dateFrom) list = list.filter((m) => (m.date || "") >= dateFrom);
+    if (dateTo) list = list.filter((m) => (m.date || "") <= dateTo);
     return list;
-  }, [meets, city, q, dateFrom, dateTo, type]);
+  }, [meets, location, eventType, dateFrom, dateTo]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const pageSafe = Math.min(Math.max(1, page), totalPages);
-
   const paged = useMemo(() => {
     const start = (pageSafe - 1) * PAGE_SIZE;
     return filtered.slice(start, start + PAGE_SIZE);
   }, [filtered, pageSafe]);
 
-  // reset to page 1 whenever filters change
-  useEffect(() => {
-    setPage(1);
-  }, [q, city, type, dateFrom, dateTo]);
+  useEffect(() => { setPage(1); }, [location, eventType, dateFrom, dateTo]);
+
+  function handleSearch(e) {
+    e.preventDefault();
+    setMode("find");
+    setSearched(true);
+  }
+
+  function clearAll() {
+    setLocation("");
+    setEventType("All Types");
+    setRadius("25 mi");
+    setDateFrom("");
+    setDateTo("");
+    setSearched(false);
+    setMode(null);
+  }
 
   return (
-    <div className="min-h-screen bg-[#0B1220] text-white">
-      {/* NAVBAR (Bubble-style) */}
-      <header className="sticky top-0 z-50 border-b border-white/10 bg-[#0B1220]/85 backdrop-blur">
-        <div className="mx-auto flex max-w-6xl items-center justify-between px-5 py-3">
-          <button
-            onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
-            className="flex items-center gap-3"
-            aria-label="Go to home"
-          >
-            <div className="grid h-9 w-9 place-items-center rounded-lg bg-white/10 ring-1 ring-white/15">
-              <span className="text-lg font-black tracking-tight">C</span>
-            </div>
-            <div className="leading-tight">
-              <div className="text-sm font-semibold">Cruiser</div>
-              <div className="text-xs text-white/60">Car meets, organized.</div>
-            </div>
+    <div style={{ minHeight: "100vh", background: "#FAFAF9", color: "#1a1a1a", fontFamily: "'DM Sans', -apple-system, sans-serif" }}>
+
+      {/* Google Font */}
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,300&display=swap');
+        * { box-sizing: border-box; }
+        body { margin: 0; }
+        input, select, button { font-family: inherit; }
+        ::placeholder { color: #bbb; }
+        .meet-card:hover { border-color: #d0d0cc !important; box-shadow: 0 4px 24px rgba(0,0,0,0.07) !important; transform: translateY(-1px); }
+        .meet-card { transition: all 0.18s ease; }
+        .chip:hover { border-color: #1a1a1a !important; color: #1a1a1a !important; }
+        .split-btn:hover { background: #f5f5f3 !important; }
+        .nav-link:hover { color: #1a1a1a !important; }
+        .filter-toggle:hover { color: #555 !important; }
+        @media (max-width: 768px) {
+          .hero-grid { grid-template-columns: 1fr !important; }
+          .stats-row { gap: 24px !important; }
+          .nav-links { display: none !important; }
+          .hero-text h1 { font-size: 36px !important; }
+        }
+      `}</style>
+
+      {/* NAV */}
+      <header style={{ borderBottom: "1px solid #ECEAE6", background: "#FAFAF9", position: "sticky", top: 0, zIndex: 50 }}>
+        <div style={{ maxWidth: 1100, margin: "0 auto", padding: "0 32px", display: "flex", alignItems: "center", justifyContent: "space-between", height: 60 }}>
+          <button onClick={clearAll} style={{ display: "flex", alignItems: "center", gap: 10, background: "none", border: "none", cursor: "pointer", padding: 0 }}>
+            <div style={{ width: 32, height: 32, background: "#1a1a1a", borderRadius: 8, display: "grid", placeItems: "center", color: "white", fontWeight: 700, fontSize: 14 }}>C</div>
+            <span style={{ fontWeight: 600, fontSize: 15, color: "#1a1a1a" }}>Cruiser</span>
           </button>
 
-          <nav className="hidden items-center gap-6 text-sm text-white/80 md:flex">
-            <a className="hover:text-white" href="#events">
-              Events
-            </a>
-            <a className="hover:text-white" href="#submit">
-              Submit Event
-            </a>
-            <a className="hover:text-white" href="#about">
-              About
-            </a>
-            <a className="hover:text-white" href="#admin">
-              Admin
-            </a>
+          <nav className="nav-links" style={{ display: "flex", gap: 28 }}>
+            {["Events", "Submit Event", "About"].map((l) => (
+              <a key={l} className="nav-link" href="#" style={{ fontSize: 14, color: "#888", textDecoration: "none", transition: "color 0.15s" }}>{l}</a>
+            ))}
           </nav>
 
-          <div className="flex items-center gap-3">
-            <button className="hidden rounded-lg border border-white/15 bg-white/5 px-3 py-2 text-sm text-white/85 hover:bg-white/10 md:inline-flex">
-              Sign in
-            </button>
-            <button className="rounded-lg bg-[#F59E0B] px-3 py-2 text-sm font-semibold text-black hover:brightness-110">
-              Create account
-            </button>
+          <div style={{ display: "flex", gap: 8 }}>
+            <button style={{ background: "none", border: "1.5px solid #E0E0DC", borderRadius: 8, padding: "8px 16px", fontSize: 14, color: "#555", cursor: "pointer" }}>Sign in</button>
+            <button style={{ background: "#1a1a1a", border: "none", borderRadius: 8, padding: "8px 16px", fontSize: 14, color: "white", fontWeight: 500, cursor: "pointer" }}>Sign up</button>
           </div>
         </div>
       </header>
 
       {/* HERO */}
-      <section className="relative">
-        <div className="relative h-[340px] w-full overflow-hidden md:h-[420px]">
-          {/* hero image */}
-          <img
-            src="/hero.jpeg"
-            alt="Car meet hero"
-            className="h-full w-full object-cover"
-            onError={(e) => {
-              // if hero.jpeg isn't present, fall back to a dark gradient
-              e.currentTarget.style.display = "none";
-            }}
-          />
-          {/* overlays */}
-          <div className="absolute inset-0 bg-gradient-to-b from-black/35 via-black/55 to-[#0B1220]" />
-          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,rgba(245,158,11,0.18),transparent_60%)]" />
+      <section style={{ maxWidth: 1100, margin: "0 auto", padding: "64px 32px 48px" }}>
+        <div style={{ fontSize: 12, letterSpacing: "0.12em", textTransform: "uppercase", color: "#aaa", marginBottom: 16 }}>Car meet discovery</div>
 
-          {/* hero content */}
-          <div className="absolute inset-0">
-            <div className="mx-auto flex h-full max-w-6xl flex-col justify-center px-5 pb-10 pt-10">
-              <h1 className="max-w-3xl text-4xl font-black leading-tight tracking-tight md:text-5xl">
-                Discover Local Car Meets &amp; Events
-              </h1>
-              <p className="mt-3 max-w-2xl text-sm text-white/75 md:text-base">
-                Find the best car shows, cruises, and gatherings near you—without digging through 10 groups.
-              </p>
+        <div className="hero-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 64, alignItems: "start" }}>
 
-              <div className="mt-5 flex flex-wrap items-center gap-3">
-                <button className="rounded-lg bg-[#F59E0B] px-5 py-3 text-sm font-semibold text-black hover:brightness-110">
-                  Submit Your Event
-                </button>
-                <button className="rounded-lg border border-white/15 bg-white/5 px-5 py-3 text-sm font-semibold text-white/90 hover:bg-white/10">
-                  Browse Events
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* FILTER BAR (Bubble-style panel) */}
-        <div className="-mt-0 pb-10">
-          <div className="mx-auto max-w-6xl px-5">
-            <div className="rounded-xl border border-white/10 bg-[#0F1B2D] shadow-[0_20px_60px_rgba(0,0,0,0.45)]">
-              <div className="grid gap-3 p-4 md:grid-cols-12 md:items-end">
-                <div className="md:col-span-4">
-                  <label className="text-xs text-white/70">Search Events</label>
-                  <input
-                    value={q}
-                    onChange={(e) => setQ(e.target.value)}
-                    placeholder='Try: "Norfolk", "Cars & Coffee", "2026-02-20"'
-                    className="mt-1 w-full rounded-lg border border-white/10 bg-[#0B1220] px-3 py-2 text-sm text-white placeholder:text-white/35 focus:border-[#F59E0B]/60 focus:outline-none"
-                  />
-                </div>
-
-                <div className="md:col-span-2">
-                  <label className="text-xs text-white/70">Event Type</label>
-                  <select
-                    value={type}
-                    onChange={(e) => setType(e.target.value)}
-                    className="mt-1 w-full rounded-lg border border-white/10 bg-[#0B1220] px-3 py-2 text-sm text-white focus:border-[#F59E0B]/60 focus:outline-none"
-                  >
-                    {types.map((t) => (
-                      <option key={t} value={t}>
-                        {t}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div className="md:col-span-2">
-                  <label className="text-xs text-white/70">City</label>
-                  <select
-                    value={city}
-                    onChange={(e) => setCity(e.target.value)}
-                    className="mt-1 w-full rounded-lg border border-white/10 bg-[#0B1220] px-3 py-2 text-sm text-white focus:border-[#F59E0B]/60 focus:outline-none"
-                  >
-                    {cities.map((c) => (
-                      <option key={c} value={c}>
-                        {c}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div className="md:col-span-2">
-                  <label className="text-xs text-white/70">Date From</label>
-                  <input
-                    type="date"
-                    value={dateFrom}
-                    onChange={(e) => setDateFrom(e.target.value)}
-                    className="mt-1 w-full rounded-lg border border-white/10 bg-[#0B1220] px-3 py-2 text-sm text-white focus:border-[#F59E0B]/60 focus:outline-none"
-                  />
-                </div>
-
-                <div className="md:col-span-2">
-                  <label className="text-xs text-white/70">Date To</label>
-                  <input
-                    type="date"
-                    value={dateTo}
-                    onChange={(e) => setDateTo(e.target.value)}
-                    className="mt-1 w-full rounded-lg border border-white/10 bg-[#0B1220] px-3 py-2 text-sm text-white focus:border-[#F59E0B]/60 focus:outline-none"
-                  />
-                </div>
-
-                <div className="md:col-span-12 mt-1 flex flex-wrap items-center justify-between gap-3">
-                  <div className="flex items-center gap-2 text-xs text-white/60">
-                    {loading ? (
-                      <span className="rounded-full bg-white/10 px-2 py-1">Loading…</span>
-                    ) : error ? (
-                      <span className="rounded-full bg-red-500/15 px-2 py-1 text-red-200">
-                        API error (check backend): {error}
-                      </span>
-                    ) : (
-                      <span className="rounded-full bg-white/10 px-2 py-1">
-                        Showing {filtered.length} meet{filtered.length === 1 ? "" : "s"}
-                      </span>
-                    )}
-                    <span className="hidden text-white/35 md:inline">
-                      API: {API_BASE} • UI: {typeof window !== "undefined" ? window.location.origin : ""}
-                    </span>
-                  </div>
-
-                  <div className="flex items-center gap-2">
-                    <button
-                      onClick={() => {
-                        setQ("");
-                        setCity("All Cities");
-                        setType("All Types");
-                        setDateFrom("");
-                        setDateTo("");
-                      }}
-                      className="rounded-lg border border-white/15 bg-white/5 px-3 py-2 text-sm text-white/85 hover:bg-white/10"
-                    >
-                      Clear All
-                    </button>
-
-                    <button
-                      onClick={() => window.open(`${API_BASE}/meets`, "_blank", "noopener,noreferrer")}
-                      className="rounded-lg border border-white/15 bg-white/5 px-3 py-2 text-sm text-white/85 hover:bg-white/10"
-                    >
-                      Open API JSON →
-                    </button>
-
-                    <button
-                      onClick={() => {
-                        // purely visual “Search” action — filtering already happens live
-                        document.getElementById("events")?.scrollIntoView({ behavior: "smooth" });
-                      }}
-                      className="rounded-lg bg-[#F59E0B] px-4 py-2 text-sm font-semibold text-black hover:brightness-110"
-                    >
-                      Search
-                    </button>
-                  </div>
-                </div>
-              </div>
-
-              <div className="border-t border-white/10 px-4 py-3">
-                <div className="text-xs text-white/55">
-                  Tip: This matches Bubble’s “hero + filter panel + results grid” layout. Next we’ll add event
-                  images/types from the backend.
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* UPCOMING EVENTS */}
-      <section id="events" className="mx-auto max-w-6xl px-5 pb-14">
-        <div className="flex items-end justify-between gap-4">
-          <div>
-            <h2 className="text-lg font-semibold">Upcoming Events</h2>
-            <p className="mt-1 text-sm text-white/65">
-              Showing approved upcoming events
-              {filtered.length ? ` • Page ${pageSafe} of ${totalPages}` : ""}
+          {/* LEFT: headline + intent split */}
+          <div className="hero-text">
+            <h1 style={{ fontSize: 48, fontWeight: 300, lineHeight: 1.1, letterSpacing: "-0.02em", marginBottom: 16, margin: "0 0 16px" }}>
+              Find meets <span style={{ fontWeight: 600 }}>near you.</span>
+            </h1>
+            <p style={{ fontSize: 16, color: "#777", lineHeight: 1.65, marginBottom: 32, maxWidth: 420 }}>
+              No more digging through Facebook groups and Instagram stories. Every local car meet, organized in one place.
             </p>
+
+            {/* Find / Host split */}
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 1, background: "#E8E8E4", borderRadius: 12, overflow: "hidden", maxWidth: 420, marginBottom: 40 }}>
+              <button
+                className="split-btn"
+                onClick={() => setMode("find")}
+                style={{
+                  background: mode === "find" ? "#f5f5f3" : "white",
+                  border: "none",
+                  padding: "20px",
+                  textAlign: "left",
+                  cursor: "pointer",
+                  borderBottom: mode === "find" ? "2px solid #1a1a1a" : "2px solid transparent",
+                  transition: "all 0.15s"
+                }}
+              >
+                <div style={{ fontSize: 11, color: "#aaa", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 4 }}>I want to</div>
+                <div style={{ fontSize: 16, fontWeight: 600, color: "#1a1a1a" }}>Find a Meet →</div>
+              </button>
+              <button
+                className="split-btn"
+                onClick={() => setMode("host")}
+                style={{
+                  background: mode === "host" ? "#f5f5f3" : "white",
+                  border: "none",
+                  padding: "20px",
+                  textAlign: "left",
+                  cursor: "pointer",
+                  borderBottom: mode === "host" ? "2px solid #1a1a1a" : "2px solid transparent",
+                  transition: "all 0.15s"
+                }}
+              >
+                <div style={{ fontSize: 11, color: "#aaa", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 4 }}>I want to</div>
+                <div style={{ fontSize: 16, fontWeight: 600, color: "#1a1a1a" }}>Host a Meet →</div>
+              </button>
+            </div>
+
+            {/* Stats */}
+            <div className="stats-row" style={{ display: "flex", gap: 36 }}>
+              {[["248", "Active meets"], ["34", "Cities"], ["12k", "Enthusiasts"]].map(([num, label]) => (
+                <div key={label}>
+                  <div style={{ fontSize: 26, fontWeight: 600, color: "#1a1a1a" }}>{num}</div>
+                  <div style={{ fontSize: 13, color: "#aaa", marginTop: 2 }}>{label}</div>
+                </div>
+              ))}
+            </div>
           </div>
 
-          <div className="hidden text-sm text-white/60 md:block">
-            {filtered.length ? `Showing ${Math.min(filtered.length, PAGE_SIZE)} of ${filtered.length}` : "—"}
+          {/* RIGHT: search panel */}
+          <div style={{ background: "white", border: "1.5px solid #E8E8E4", borderRadius: 16, padding: 28, boxShadow: "0 4px 32px rgba(0,0,0,0.05)" }}>
+            <div style={{ fontSize: 13, fontWeight: 500, color: "#1a1a1a", marginBottom: 16 }}>
+              {mode === "host" ? "Submit your event" : "Search for meets near you"}
+            </div>
+
+            {mode !== "host" ? (
+              <form onSubmit={handleSearch}>
+                {/* Location input */}
+                <div style={{ marginBottom: 12 }}>
+                  <label style={{ fontSize: 12, color: "#999", display: "block", marginBottom: 6 }}>City or zip code</label>
+                  <input
+                    value={location}
+                    onChange={(e) => setLocation(e.target.value)}
+                    placeholder="e.g. Norfolk, VA or 23510"
+                    style={{ width: "100%", border: "1.5px solid #E8E8E4", borderRadius: 8, padding: "11px 14px", fontSize: 14, outline: "none", color: "#1a1a1a", background: "#FAFAF9" }}
+                  />
+                </div>
+
+                {/* Radius */}
+                <div style={{ marginBottom: 16 }}>
+                  <label style={{ fontSize: 12, color: "#999", display: "block", marginBottom: 6 }}>Search radius</label>
+                  <div style={{ display: "flex", gap: 6 }}>
+                    {RADII.map((r) => (
+                      <button
+                        key={r}
+                        type="button"
+                        onClick={() => setRadius(r)}
+                        className="chip"
+                        style={{
+                          flex: 1,
+                          border: `1.5px solid ${radius === r ? "#1a1a1a" : "#E8E8E4"}`,
+                          background: radius === r ? "#1a1a1a" : "white",
+                          color: radius === r ? "white" : "#777",
+                          borderRadius: 8,
+                          padding: "8px 4px",
+                          fontSize: 12,
+                          cursor: "pointer",
+                          transition: "all 0.15s"
+                        }}
+                      >
+                        {r}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Advanced filters toggle */}
+                <button
+                  type="button"
+                  className="filter-toggle"
+                  onClick={() => setShowFilters(!showFilters)}
+                  style={{ background: "none", border: "none", fontSize: 13, color: "#aaa", cursor: "pointer", padding: "0 0 12px", display: "flex", alignItems: "center", gap: 6, transition: "color 0.15s" }}
+                >
+                  <span style={{ fontSize: 16, lineHeight: 1 }}>{showFilters ? "−" : "+"}</span>
+                  {showFilters ? "Hide filters" : "More filters"}
+                </button>
+
+                {showFilters && (
+                  <div style={{ borderTop: "1px solid #F0EFEB", paddingTop: 16, marginBottom: 16, display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+                    <div>
+                      <label style={{ fontSize: 12, color: "#999", display: "block", marginBottom: 6 }}>Event type</label>
+                      <select
+                        value={eventType}
+                        onChange={(e) => setEventType(e.target.value)}
+                        style={{ width: "100%", border: "1.5px solid #E8E8E4", borderRadius: 8, padding: "10px 12px", fontSize: 13, color: "#1a1a1a", background: "#FAFAF9", outline: "none" }}
+                      >
+                        {EVENT_TYPES.map((t) => <option key={t}>{t}</option>)}
+                      </select>
+                    </div>
+                    <div>
+                      <label style={{ fontSize: 12, color: "#999", display: "block", marginBottom: 6 }}>Date from</label>
+                      <input
+                        type="date"
+                        value={dateFrom}
+                        onChange={(e) => setDateFrom(e.target.value)}
+                        style={{ width: "100%", border: "1.5px solid #E8E8E4", borderRadius: 8, padding: "10px 12px", fontSize: 13, color: "#1a1a1a", background: "#FAFAF9", outline: "none" }}
+                      />
+                    </div>
+                    <div>
+                      <label style={{ fontSize: 12, color: "#999", display: "block", marginBottom: 6 }}>Date to</label>
+                      <input
+                        type="date"
+                        value={dateTo}
+                        onChange={(e) => setDateTo(e.target.value)}
+                        style={{ width: "100%", border: "1.5px solid #E8E8E4", borderRadius: 8, padding: "10px 12px", fontSize: 13, color: "#1a1a1a", background: "#FAFAF9", outline: "none" }}
+                      />
+                    </div>
+                  </div>
+                )}
+
+                <button
+                  type="submit"
+                  style={{ width: "100%", background: "#1a1a1a", color: "white", border: "none", borderRadius: 8, padding: "13px", fontSize: 14, fontWeight: 500, cursor: "pointer" }}
+                >
+                  Search Meets →
+                </button>
+              </form>
+            ) : (
+              /* HOST FORM */
+              <div>
+                {[
+                  { label: "Event title", placeholder: "e.g. Sunday Morning Cars & Coffee" },
+                  { label: "Location / city", placeholder: "e.g. Norfolk, VA" },
+                  { label: "Host name", placeholder: "Your name or group name" },
+                ].map(({ label, placeholder }) => (
+                  <div key={label} style={{ marginBottom: 12 }}>
+                    <label style={{ fontSize: 12, color: "#999", display: "block", marginBottom: 6 }}>{label}</label>
+                    <input
+                      placeholder={placeholder}
+                      style={{ width: "100%", border: "1.5px solid #E8E8E4", borderRadius: 8, padding: "11px 14px", fontSize: 14, outline: "none", color: "#1a1a1a", background: "#FAFAF9" }}
+                    />
+                  </div>
+                ))}
+
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 12 }}>
+                  <div>
+                    <label style={{ fontSize: 12, color: "#999", display: "block", marginBottom: 6 }}>Date</label>
+                    <input type="date" style={{ width: "100%", border: "1.5px solid #E8E8E4", borderRadius: 8, padding: "10px 12px", fontSize: 13, color: "#1a1a1a", background: "#FAFAF9", outline: "none" }} />
+                  </div>
+                  <div>
+                    <label style={{ fontSize: 12, color: "#999", display: "block", marginBottom: 6 }}>Time</label>
+                    <input type="time" style={{ width: "100%", border: "1.5px solid #E8E8E4", borderRadius: 8, padding: "10px 12px", fontSize: 13, color: "#1a1a1a", background: "#FAFAF9", outline: "none" }} />
+                  </div>
+                </div>
+
+                <div style={{ marginBottom: 12 }}>
+                  <label style={{ fontSize: 12, color: "#999", display: "block", marginBottom: 6 }}>Event type</label>
+                  <select style={{ width: "100%", border: "1.5px solid #E8E8E4", borderRadius: 8, padding: "10px 12px", fontSize: 13, color: "#1a1a1a", background: "#FAFAF9", outline: "none" }}>
+                    {EVENT_TYPES.slice(1).map((t) => <option key={t}>{t}</option>)}
+                  </select>
+                </div>
+
+                <div style={{ marginBottom: 16 }}>
+                  <label style={{ fontSize: 12, color: "#999", display: "block", marginBottom: 6 }}>Description</label>
+                  <textarea
+                    placeholder="Tell people about your meet..."
+                    rows={3}
+                    style={{ width: "100%", border: "1.5px solid #E8E8E4", borderRadius: 8, padding: "11px 14px", fontSize: 14, outline: "none", color: "#1a1a1a", background: "#FAFAF9", resize: "vertical", fontFamily: "inherit" }}
+                  />
+                </div>
+
+                <button style={{ width: "100%", background: "#1a1a1a", color: "white", border: "none", borderRadius: 8, padding: "13px", fontSize: 14, fontWeight: 500, cursor: "pointer" }}>
+                  Submit for Review →
+                </button>
+              </div>
+            )}
           </div>
         </div>
+      </section>
 
-        <div className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {loading && (
-            <>
-              {Array.from({ length: 3 }).map((_, i) => (
-                <div
-                  key={i}
-                  className="h-[280px] animate-pulse rounded-xl border border-white/10 bg-white/5"
-                />
-              ))}
-            </>
-          )}
+      {/* RESULTS — only show after search or mode=find */}
+      {(searched || mode === "find") && (
+        <section id="events" style={{ maxWidth: 1100, margin: "0 auto", padding: "0 32px 64px" }}>
+          <div style={{ borderTop: "1px solid #ECEAE6", paddingTop: 40, marginBottom: 24, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+            <div>
+              <h2 style={{ fontSize: 18, fontWeight: 600, margin: 0 }}>
+                {loading ? "Loading meets..." : `${filtered.length} meet${filtered.length === 1 ? "" : "s"} found`}
+              </h2>
+              {location && <p style={{ fontSize: 14, color: "#aaa", marginTop: 4 }}>Near "{location}" · {radius}</p>}
+            </div>
+            <button onClick={clearAll} style={{ background: "none", border: "1.5px solid #E8E8E4", borderRadius: 8, padding: "8px 16px", fontSize: 13, color: "#888", cursor: "pointer" }}>
+              Clear search
+            </button>
+          </div>
 
-          {!loading && !error && paged.length === 0 && (
-            <div className="col-span-full rounded-xl border border-white/10 bg-white/5 p-6 text-white/75">
-              No events match your filters.
+          {error && (
+            <div style={{ background: "#FEF2F2", border: "1px solid #FECACA", borderRadius: 10, padding: "14px 18px", fontSize: 14, color: "#991B1B", marginBottom: 24 }}>
+              Could not load meets — {error}
             </div>
           )}
 
-          {!loading &&
-            !error &&
-            paged.map((m) => {
-              const thumb = THUMB_BY_ID[m.id] || "";
-              return (
-                <article
-                  key={m.id}
-                  className="overflow-hidden rounded-xl border border-white/10 bg-[#0F1B2D] hover:border-white/20"
-                >
-                  {/* thumbnail */}
-                  <div className="relative h-36 w-full bg-gradient-to-br from-white/5 to-white/0">
-                    {thumb ? (
-                      <img
-                        src={thumb}
-                        alt={m.title || "Event"}
-                        className="h-full w-full object-cover"
-                        onError={(e) => {
-                          e.currentTarget.style.display = "none";
-                        }}
-                      />
-                    ) : null}
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/45 via-black/10 to-transparent" />
-                    <div className="absolute left-3 top-3 rounded-full bg-black/45 px-2 py-1 text-xs text-white/85 ring-1 ring-white/15">
-                      {m.city || "City"}
-                    </div>
-                    <div className="absolute right-3 top-3 rounded-full bg-black/45 px-2 py-1 text-xs text-white/85 ring-1 ring-white/15">
-                      {m.date || "Date"}
-                    </div>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))", gap: 16 }}>
+            {loading && Array.from({ length: 3 }).map((_, i) => (
+              <div key={i} style={{ height: 220, borderRadius: 12, background: "#F0EFEB", animation: "pulse 1.5s infinite" }} />
+            ))}
+
+            {!loading && !error && paged.length === 0 && (
+              <div style={{ gridColumn: "1/-1", textAlign: "center", padding: "48px 0", color: "#aaa", fontSize: 15 }}>
+                No meets found matching your search. Try a different city or expand your radius.
+              </div>
+            )}
+
+            {!loading && !error && paged.map((m) => (
+              <article
+                key={m.id}
+                className="meet-card"
+                style={{ background: "white", border: "1.5px solid #E8E8E4", borderRadius: 12, overflow: "hidden", cursor: "pointer" }}
+              >
+                {/* Card color bar */}
+                <div style={{ height: 4, background: "#1a1a1a" }} />
+
+                <div style={{ padding: "20px" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 10 }}>
+                    <span style={{ fontSize: 11, background: "#F5F5F3", color: "#777", padding: "4px 10px", borderRadius: 100, letterSpacing: "0.05em" }}>
+                      {m.type || "Meet"}
+                    </span>
+                    <span style={{ fontSize: 12, color: "#aaa" }}>{formatDatePretty(m.date)}</span>
                   </div>
 
-                  {/* content */}
-                  <div className="p-4">
-                    <div className="flex items-start justify-between gap-3">
-                      <div>
-                        <h3 className="text-base font-semibold leading-tight">{m.title || "Untitled Meet"}</h3>
-                        <p className="mt-1 text-sm text-white/65">
-                          {m.city || "—"} • {formatDatePretty(m.date)}
-                        </p>
-                      </div>
+                  <h3 style={{ fontSize: 16, fontWeight: 600, margin: "0 0 6px", lineHeight: 1.3 }}>{m.title || "Untitled Meet"}</h3>
+                  <p style={{ fontSize: 13, color: "#888", margin: "0 0 16px" }}>📍 {m.city || "Location TBD"}</p>
 
-                      <span className="rounded-lg border border-white/10 bg-white/5 px-2 py-1 text-xs text-white/70">
-                        ID: {m.id}
-                      </span>
-                    </div>
-
-                    <p className="mt-3 line-clamp-3 text-sm text-white/70">
-                      A curated meet listing. Next step: add real venue, host, RSVP, and images from the database.
-                    </p>
-
-                    <div className="mt-4 flex items-center justify-between">
-                      <a
-                        href={`${API_BASE}/meets/${m.id}`}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="text-sm font-semibold text-[#F59E0B] hover:brightness-110"
-                      >
-                        View Details →
-                      </a>
-
-                      <button className="rounded-lg border border-white/15 bg-white/5 px-3 py-2 text-sm text-white/85 hover:bg-white/10">
-                        Save
-                      </button>
-                    </div>
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", borderTop: "1px solid #F0EFEB", paddingTop: 14 }}>
+                    <span style={{ fontSize: 13, color: "#888" }}>by {m.host || "Anonymous"}</span>
+                    <a
+                      href={`${API_BASE}/meets/${m.id}`}
+                      target="_blank"
+                      rel="noreferrer"
+                      style={{ fontSize: 13, fontWeight: 600, color: "#1a1a1a", textDecoration: "none" }}
+                    >
+                      Details →
+                    </a>
                   </div>
-                </article>
-              );
-            })}
-        </div>
-
-        {/* Pagination bar (Bubble-ish) */}
-        {!loading && !error && filtered.length > PAGE_SIZE && (
-          <div className="mt-8 flex items-center justify-center gap-2 text-sm text-white/70">
-            <button
-              onClick={() => setPage((p) => Math.max(1, p - 1))}
-              className="rounded-lg border border-white/15 bg-white/5 px-3 py-2 hover:bg-white/10 disabled:opacity-40"
-              disabled={pageSafe === 1}
-            >
-              ← Previous
-            </button>
-
-            {Array.from({ length: totalPages }).slice(0, 7).map((_, i) => {
-              const n = i + 1;
-              const active = n === pageSafe;
-              return (
-                <button
-                  key={n}
-                  onClick={() => setPage(n)}
-                  className={[
-                    "h-9 w-9 rounded-lg border px-0 py-2",
-                    active
-                      ? "border-[#F59E0B]/60 bg-[#F59E0B] text-black"
-                      : "border-white/15 bg-white/5 hover:bg-white/10",
-                  ].join(" ")}
-                >
-                  {n}
-                </button>
-              );
-            })}
-
-            <button
-              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-              className="rounded-lg border border-white/15 bg-white/5 px-3 py-2 hover:bg-white/10 disabled:opacity-40"
-              disabled={pageSafe === totalPages}
-            >
-              Next →
-            </button>
+                </div>
+              </article>
+            ))}
           </div>
-        )}
-      </section>
+
+          {/* Pagination */}
+          {!loading && !error && filtered.length > PAGE_SIZE && (
+            <div style={{ marginTop: 32, display: "flex", justifyContent: "center", gap: 8 }}>
+              <button
+                onClick={() => setPage((p) => Math.max(1, p - 1))}
+                disabled={pageSafe === 1}
+                style={{ border: "1.5px solid #E8E8E4", background: "white", borderRadius: 8, padding: "8px 16px", fontSize: 14, cursor: "pointer", opacity: pageSafe === 1 ? 0.4 : 1 }}
+              >
+                ← Prev
+              </button>
+              {Array.from({ length: totalPages }).map((_, i) => (
+                <button
+                  key={i}
+                  onClick={() => setPage(i + 1)}
+                  style={{
+                    border: "1.5px solid",
+                    borderColor: pageSafe === i + 1 ? "#1a1a1a" : "#E8E8E4",
+                    background: pageSafe === i + 1 ? "#1a1a1a" : "white",
+                    color: pageSafe === i + 1 ? "white" : "#1a1a1a",
+                    borderRadius: 8,
+                    width: 36,
+                    height: 36,
+                    fontSize: 14,
+                    cursor: "pointer"
+                  }}
+                >
+                  {i + 1}
+                </button>
+              ))}
+              <button
+                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                disabled={pageSafe === totalPages}
+                style={{ border: "1.5px solid #E8E8E4", background: "white", borderRadius: 8, padding: "8px 16px", fontSize: 14, cursor: "pointer", opacity: pageSafe === totalPages ? 0.4 : 1 }}
+              >
+                Next →
+              </button>
+            </div>
+          )}
+        </section>
+      )}
 
       {/* FOOTER */}
-      <footer className="border-t border-white/10 bg-[#0B1220] py-10">
-        <div className="mx-auto max-w-6xl px-5 text-sm text-white/55">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div>© {new Date().getFullYear()} Cruiser</div>
-            <div className="flex items-center gap-4">
-              <a className="hover:text-white" href="#about">
-                About
-              </a>
-              <a className="hover:text-white" href="#events">
-                Find Event
-              </a>
-              <a className="hover:text-white" href="#submit">
-                Submit
-              </a>
-            </div>
+      <footer style={{ borderTop: "1px solid #ECEAE6", padding: "32px", background: "#FAFAF9" }}>
+        <div style={{ maxWidth: 1100, margin: "0 auto", display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 13, color: "#aaa" }}>
+          <span>© {new Date().getFullYear()} Cruiser</span>
+          <div style={{ display: "flex", gap: 24 }}>
+            {["Events", "Submit", "About"].map((l) => (
+              <a key={l} href="#" style={{ color: "#aaa", textDecoration: "none" }}>{l}</a>
+            ))}
           </div>
         </div>
       </footer>
