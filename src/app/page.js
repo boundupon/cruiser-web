@@ -140,7 +140,20 @@ export default function Home() {
       </header>
 
       {/* HERO */}
-      <section style={{ maxWidth: 1100, margin: "0 auto", padding: "64px 32px 48px" }}>
+      <section style={{ position: "relative", overflow: "hidden" }}>
+        {/* Background image */}
+        <div style={{
+          position: "absolute", inset: 0,
+          backgroundImage: "url('/hero.jpg')",
+          backgroundSize: "cover",
+          backgroundPosition: "center 40%",
+          zIndex: 0
+        }} />
+        {/* Gradient overlays */}
+        <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to right, rgba(250,250,249,0.97) 45%, rgba(250,250,249,0.75) 70%, rgba(250,250,249,0.4) 100%)", zIndex: 1 }} />
+        <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to bottom, transparent 60%, #FAFAF9 100%)", zIndex: 1 }} />
+
+        <div style={{ position: "relative", zIndex: 2, maxWidth: 1100, margin: "0 auto", padding: "64px 32px 48px" }}>
         <div style={{ fontSize: 12, letterSpacing: "0.12em", textTransform: "uppercase", color: "#aaa", marginBottom: 16 }}>Car meet discovery</div>
 
         <div className="hero-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 64, alignItems: "start" }}>
@@ -148,7 +161,7 @@ export default function Home() {
           {/* LEFT: headline + intent split */}
           <div className="hero-text">
             <h1 style={{ fontSize: 48, fontWeight: 300, lineHeight: 1.1, letterSpacing: "-0.02em", marginBottom: 16, margin: "0 0 16px" }}>
-              Find car meets <span style={{ fontWeight: 600 }}>near you.</span>
+              Find meets <span style={{ fontWeight: 600 }}>near you.</span>
             </h1>
             <p style={{ fontSize: 16, color: "#777", lineHeight: 1.65, marginBottom: 32, maxWidth: 420 }}>
               No more digging through Facebook groups and Instagram stories. Every local car meet, organized in one place.
@@ -349,7 +362,8 @@ export default function Home() {
               </div>
             )}
           </div>
-        </div>
+        </div>{/* end hero-grid */}
+        </div>{/* end z-2 container */}
       </section>
 
       {/* RESULTS — only show after search or mode=find */}
