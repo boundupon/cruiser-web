@@ -150,8 +150,8 @@ export default function Home() {
           zIndex: 0
         }} />
         {/* Gradient overlays */}
-        <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to right, rgba(250,250,249,0.97) 45%, rgba(250,250,249,0.75) 70%, rgba(250,250,249,0.4) 100%)", zIndex: 1 }} />
-        <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to bottom, transparent 60%, #FAFAF9 100%)", zIndex: 1 }} />
+        <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to right, rgba(250,250,249,0.96) 30%, rgba(250,250,249,0.5) 55%, rgba(250,250,249,0.05) 100%)", zIndex: 1 }} />
+        <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to bottom, transparent 70%, #FAFAF9 100%)", zIndex: 1 }} />
 
         <div style={{ position: "relative", zIndex: 2, maxWidth: 1100, margin: "0 auto", padding: "64px 32px 48px" }}>
         <div style={{ fontSize: 12, letterSpacing: "0.12em", textTransform: "uppercase", color: "#aaa", marginBottom: 16 }}>Car meet discovery</div>
