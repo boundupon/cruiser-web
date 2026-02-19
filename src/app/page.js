@@ -139,197 +139,143 @@ export default function Home() {
         </div>
       </header>
 
-      {/* HERO */}
-      <section style={{ position: "relative", overflow: "hidden" }}>
-        {/* Background image */}
+      {/* HERO IMAGE — full width, tall */}
+      <section style={{ position: "relative", height: 480, overflow: "hidden" }}>
         <div style={{
           position: "absolute", inset: 0,
           backgroundImage: "url('/hero.jpg')",
           backgroundSize: "cover",
-          backgroundPosition: "center 40%",
-          zIndex: 0
+          backgroundPosition: "center 45%",
         }} />
-        {/* Gradient overlays */}
-        <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to right, rgba(250,250,249,0.96) 30%, rgba(250,250,249,0.5) 55%, rgba(250,250,249,0.05) 100%)", zIndex: 1 }} />
-        <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to bottom, transparent 70%, #FAFAF9 100%)", zIndex: 1 }} />
+        {/* Only a subtle bottom fade to white */}
+        <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to bottom, rgba(0,0,0,0.15) 0%, transparent 40%, rgba(250,250,249,0.85) 85%, #FAFAF9 100%)" }} />
 
-        <div style={{ position: "relative", zIndex: 2, maxWidth: 1100, margin: "0 auto", padding: "64px 32px 48px" }}>
-        <div style={{ fontSize: 12, letterSpacing: "0.12em", textTransform: "uppercase", color: "#aaa", marginBottom: 16 }}>Car meet discovery</div>
+        {/* Headline overlaid on image */}
+        <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", justifyContent: "flex-end", padding: "0 48px 48px" }}>
+          <div style={{ fontSize: 11, letterSpacing: "0.14em", textTransform: "uppercase", color: "rgba(255,255,255,0.7)", marginBottom: 10 }}>Car meet discovery</div>
+          <h1 style={{ fontSize: 52, fontWeight: 300, lineHeight: 1.08, letterSpacing: "-0.02em", margin: 0, color: "#1a1a1a" }}>
+            Find meets <span style={{ fontWeight: 700 }}>near you.</span>
+          </h1>
+        </div>
+      </section>
 
-        <div className="hero-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 64, alignItems: "start" }}>
+      {/* SEARCH + INTENT PANEL — sits cleanly below the image */}
+      <section style={{ background: "#FAFAF9", padding: "0 32px 48px" }}>
+        <div style={{ maxWidth: 860, margin: "0 auto" }}>
 
-          {/* LEFT: headline + intent split */}
-          <div className="hero-text">
-            <h1 style={{ fontSize: 48, fontWeight: 300, lineHeight: 1.1, letterSpacing: "-0.02em", marginBottom: 16, margin: "0 0 16px" }}>
-              Find meets <span style={{ fontWeight: 600 }}>near you.</span>
-            </h1>
-            <p style={{ fontSize: 16, color: "#777", lineHeight: 1.65, marginBottom: 32, maxWidth: 420 }}>
-              No more digging through Facebook groups and Instagram stories. Every local car meet, organized in one place.
-            </p>
-
-            {/* Find / Host split */}
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 1, background: "#E8E8E4", borderRadius: 12, overflow: "hidden", maxWidth: 420, marginBottom: 40 }}>
-              <button
-                className="split-btn"
-                onClick={() => setMode("find")}
-                style={{
-                  background: mode === "find" ? "#f5f5f3" : "white",
-                  border: "none",
-                  padding: "20px",
-                  textAlign: "left",
-                  cursor: "pointer",
-                  borderBottom: mode === "find" ? "2px solid #1a1a1a" : "2px solid transparent",
-                  transition: "all 0.15s"
-                }}
-              >
-                <div style={{ fontSize: 11, color: "#aaa", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 4 }}>I want to</div>
-                <div style={{ fontSize: 16, fontWeight: 600, color: "#1a1a1a" }}>Find a Meet →</div>
-              </button>
-              <button
-                className="split-btn"
-                onClick={() => setMode("host")}
-                style={{
-                  background: mode === "host" ? "#f5f5f3" : "white",
-                  border: "none",
-                  padding: "20px",
-                  textAlign: "left",
-                  cursor: "pointer",
-                  borderBottom: mode === "host" ? "2px solid #1a1a1a" : "2px solid transparent",
-                  transition: "all 0.15s"
-                }}
-              >
-                <div style={{ fontSize: 11, color: "#aaa", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 4 }}>I want to</div>
-                <div style={{ fontSize: 16, fontWeight: 600, color: "#1a1a1a" }}>Host a Meet →</div>
-              </button>
-            </div>
-
-            {/* Stats */}
-            <div className="stats-row" style={{ display: "flex", gap: 36 }}>
-              {[["248", "Active meets"], ["34", "Cities"], ["12k", "Enthusiasts"]].map(([num, label]) => (
-                <div key={label}>
-                  <div style={{ fontSize: 26, fontWeight: 600, color: "#1a1a1a" }}>{num}</div>
-                  <div style={{ fontSize: 13, color: "#aaa", marginTop: 2 }}>{label}</div>
-                </div>
-              ))}
-            </div>
+          {/* Find / Host toggle */}
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 1, background: "#E8E8E4", borderRadius: 12, overflow: "hidden", marginBottom: 24 }}>
+            <button
+              className="split-btn"
+              onClick={() => setMode("find")}
+              style={{
+                background: mode === "host" ? "white" : "#1a1a1a",
+                border: "none", padding: "18px 24px", textAlign: "left",
+                cursor: "pointer", transition: "all 0.15s"
+              }}
+            >
+              <div style={{ fontSize: 11, color: mode === "host" ? "#aaa" : "rgba(255,255,255,0.6)", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 3 }}>I want to</div>
+              <div style={{ fontSize: 16, fontWeight: 600, color: mode === "host" ? "#1a1a1a" : "white" }}>Find a Meet →</div>
+            </button>
+            <button
+              className="split-btn"
+              onClick={() => setMode("host")}
+              style={{
+                background: mode === "host" ? "#1a1a1a" : "white",
+                border: "none", padding: "18px 24px", textAlign: "left",
+                cursor: "pointer", transition: "all 0.15s"
+              }}
+            >
+              <div style={{ fontSize: 11, color: mode === "host" ? "rgba(255,255,255,0.6)" : "#aaa", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 3 }}>I want to</div>
+              <div style={{ fontSize: 16, fontWeight: 600, color: mode === "host" ? "white" : "#1a1a1a" }}>Host a Meet →</div>
+            </button>
           </div>
 
-          {/* RIGHT: search panel */}
-          <div style={{ background: "white", border: "1.5px solid #E8E8E4", borderRadius: 16, padding: 28, boxShadow: "0 4px 32px rgba(0,0,0,0.05)" }}>
-            <div style={{ fontSize: 13, fontWeight: 500, color: "#1a1a1a", marginBottom: 16 }}>
-              {mode === "host" ? "Submit your event" : "Search for meets near you"}
-            </div>
-
+          {/* Search / Host form panel */}
+          <div style={{ background: "white", border: "1.5px solid #E8E8E4", borderRadius: 16, padding: 28, boxShadow: "0 2px 24px rgba(0,0,0,0.05)" }}>
             {mode !== "host" ? (
               <form onSubmit={handleSearch}>
-                {/* Location input */}
-                <div style={{ marginBottom: 12 }}>
-                  <label style={{ fontSize: 12, color: "#999", display: "block", marginBottom: 6 }}>City or zip code</label>
-                  <input
-                    value={location}
-                    onChange={(e) => setLocation(e.target.value)}
-                    placeholder="e.g. Norfolk, VA or 23510"
-                    style={{ width: "100%", border: "1.5px solid #E8E8E4", borderRadius: 8, padding: "11px 14px", fontSize: 14, outline: "none", color: "#1a1a1a", background: "#FAFAF9" }}
-                  />
-                </div>
-
-                {/* Radius */}
-                <div style={{ marginBottom: 16 }}>
-                  <label style={{ fontSize: 12, color: "#999", display: "block", marginBottom: 6 }}>Search radius</label>
-                  <div style={{ display: "flex", gap: 6 }}>
-                    {RADII.map((r) => (
-                      <button
-                        key={r}
-                        type="button"
-                        onClick={() => setRadius(r)}
-                        className="chip"
-                        style={{
-                          flex: 1,
-                          border: `1.5px solid ${radius === r ? "#1a1a1a" : "#E8E8E4"}`,
-                          background: radius === r ? "#1a1a1a" : "white",
-                          color: radius === r ? "white" : "#777",
-                          borderRadius: 8,
-                          padding: "8px 4px",
-                          fontSize: 12,
-                          cursor: "pointer",
-                          transition: "all 0.15s"
-                        }}
-                      >
-                        {r}
-                      </button>
-                    ))}
+                <div style={{ display: "grid", gridTemplateColumns: "1fr auto", gap: 12, alignItems: "end", marginBottom: 16 }}>
+                  <div>
+                    <label style={{ fontSize: 12, color: "#999", display: "block", marginBottom: 6 }}>City or zip code</label>
+                    <input
+                      value={location}
+                      onChange={(e) => setLocation(e.target.value)}
+                      placeholder="e.g. Norfolk, VA or 23510"
+                      style={{ width: "100%", border: "1.5px solid #E8E8E4", borderRadius: 8, padding: "12px 14px", fontSize: 15, outline: "none", color: "#1a1a1a", background: "#FAFAF9" }}
+                    />
                   </div>
+                  <button
+                    type="submit"
+                    style={{ background: "#1a1a1a", color: "white", border: "none", borderRadius: 8, padding: "12px 28px", fontSize: 14, fontWeight: 500, cursor: "pointer", whiteSpace: "nowrap", height: 46 }}
+                  >
+                    Search Meets →
+                  </button>
                 </div>
 
-                {/* Advanced filters toggle */}
+                {/* Radius chips */}
+                <div style={{ display: "flex", gap: 6, alignItems: "center", marginBottom: 12 }}>
+                  <span style={{ fontSize: 12, color: "#aaa", marginRight: 4 }}>Radius:</span>
+                  {RADII.map((r) => (
+                    <button
+                      key={r} type="button" onClick={() => setRadius(r)} className="chip"
+                      style={{
+                        border: `1.5px solid ${radius === r ? "#1a1a1a" : "#E8E8E4"}`,
+                        background: radius === r ? "#1a1a1a" : "white",
+                        color: radius === r ? "white" : "#777",
+                        borderRadius: 100, padding: "5px 14px", fontSize: 12, cursor: "pointer", transition: "all 0.15s"
+                      }}
+                    >{r}</button>
+                  ))}
+                </div>
+
+                {/* Filters toggle */}
                 <button
-                  type="button"
-                  className="filter-toggle"
+                  type="button" className="filter-toggle"
                   onClick={() => setShowFilters(!showFilters)}
-                  style={{ background: "none", border: "none", fontSize: 13, color: "#aaa", cursor: "pointer", padding: "0 0 12px", display: "flex", alignItems: "center", gap: 6, transition: "color 0.15s" }}
+                  style={{ background: "none", border: "none", fontSize: 13, color: "#aaa", cursor: "pointer", padding: 0, display: "flex", alignItems: "center", gap: 5, transition: "color 0.15s" }}
                 >
-                  <span style={{ fontSize: 16, lineHeight: 1 }}>{showFilters ? "−" : "+"}</span>
+                  <span>{showFilters ? "−" : "+"}</span>
                   {showFilters ? "Hide filters" : "More filters"}
                 </button>
 
                 {showFilters && (
-                  <div style={{ borderTop: "1px solid #F0EFEB", paddingTop: 16, marginBottom: 16, display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+                  <div style={{ borderTop: "1px solid #F0EFEB", paddingTop: 16, marginTop: 12, display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12 }}>
                     <div>
                       <label style={{ fontSize: 12, color: "#999", display: "block", marginBottom: 6 }}>Event type</label>
-                      <select
-                        value={eventType}
-                        onChange={(e) => setEventType(e.target.value)}
-                        style={{ width: "100%", border: "1.5px solid #E8E8E4", borderRadius: 8, padding: "10px 12px", fontSize: 13, color: "#1a1a1a", background: "#FAFAF9", outline: "none" }}
-                      >
+                      <select value={eventType} onChange={(e) => setEventType(e.target.value)}
+                        style={{ width: "100%", border: "1.5px solid #E8E8E4", borderRadius: 8, padding: "10px 12px", fontSize: 13, color: "#1a1a1a", background: "#FAFAF9", outline: "none" }}>
                         {EVENT_TYPES.map((t) => <option key={t}>{t}</option>)}
                       </select>
                     </div>
                     <div>
                       <label style={{ fontSize: 12, color: "#999", display: "block", marginBottom: 6 }}>Date from</label>
-                      <input
-                        type="date"
-                        value={dateFrom}
-                        onChange={(e) => setDateFrom(e.target.value)}
-                        style={{ width: "100%", border: "1.5px solid #E8E8E4", borderRadius: 8, padding: "10px 12px", fontSize: 13, color: "#1a1a1a", background: "#FAFAF9", outline: "none" }}
-                      />
+                      <input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)}
+                        style={{ width: "100%", border: "1.5px solid #E8E8E4", borderRadius: 8, padding: "10px 12px", fontSize: 13, color: "#1a1a1a", background: "#FAFAF9", outline: "none" }} />
                     </div>
                     <div>
                       <label style={{ fontSize: 12, color: "#999", display: "block", marginBottom: 6 }}>Date to</label>
-                      <input
-                        type="date"
-                        value={dateTo}
-                        onChange={(e) => setDateTo(e.target.value)}
-                        style={{ width: "100%", border: "1.5px solid #E8E8E4", borderRadius: 8, padding: "10px 12px", fontSize: 13, color: "#1a1a1a", background: "#FAFAF9", outline: "none" }}
-                      />
+                      <input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)}
+                        style={{ width: "100%", border: "1.5px solid #E8E8E4", borderRadius: 8, padding: "10px 12px", fontSize: 13, color: "#1a1a1a", background: "#FAFAF9", outline: "none" }} />
                     </div>
                   </div>
                 )}
-
-                <button
-                  type="submit"
-                  style={{ width: "100%", background: "#1a1a1a", color: "white", border: "none", borderRadius: 8, padding: "13px", fontSize: 14, fontWeight: 500, cursor: "pointer" }}
-                >
-                  Search Meets →
-                </button>
               </form>
             ) : (
               /* HOST FORM */
               <div>
-                {[
-                  { label: "Event title", placeholder: "e.g. Sunday Morning Cars & Coffee" },
-                  { label: "Location / city", placeholder: "e.g. Norfolk, VA" },
-                  { label: "Host name", placeholder: "Your name or group name" },
-                ].map(({ label, placeholder }) => (
-                  <div key={label} style={{ marginBottom: 12 }}>
-                    <label style={{ fontSize: 12, color: "#999", display: "block", marginBottom: 6 }}>{label}</label>
-                    <input
-                      placeholder={placeholder}
-                      style={{ width: "100%", border: "1.5px solid #E8E8E4", borderRadius: 8, padding: "11px 14px", fontSize: 14, outline: "none", color: "#1a1a1a", background: "#FAFAF9" }}
-                    />
-                  </div>
-                ))}
-
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 12 }}>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12, marginBottom: 12 }}>
+                  {[
+                    { label: "Event title", placeholder: "e.g. Sunday Morning Cars & Coffee", col: "1 / -1" },
+                    { label: "Location / city", placeholder: "e.g. Norfolk, VA" },
+                    { label: "Host name", placeholder: "Your name or group" },
+                  ].map(({ label, placeholder, col }) => (
+                    <div key={label} style={{ gridColumn: col }}>
+                      <label style={{ fontSize: 12, color: "#999", display: "block", marginBottom: 6 }}>{label}</label>
+                      <input placeholder={placeholder}
+                        style={{ width: "100%", border: "1.5px solid #E8E8E4", borderRadius: 8, padding: "11px 14px", fontSize: 14, outline: "none", color: "#1a1a1a", background: "#FAFAF9" }} />
+                    </div>
+                  ))}
                   <div>
                     <label style={{ fontSize: 12, color: "#999", display: "block", marginBottom: 6 }}>Date</label>
                     <input type="date" style={{ width: "100%", border: "1.5px solid #E8E8E4", borderRadius: 8, padding: "10px 12px", fontSize: 13, color: "#1a1a1a", background: "#FAFAF9", outline: "none" }} />
@@ -338,32 +284,35 @@ export default function Home() {
                     <label style={{ fontSize: 12, color: "#999", display: "block", marginBottom: 6 }}>Time</label>
                     <input type="time" style={{ width: "100%", border: "1.5px solid #E8E8E4", borderRadius: 8, padding: "10px 12px", fontSize: 13, color: "#1a1a1a", background: "#FAFAF9", outline: "none" }} />
                   </div>
+                  <div>
+                    <label style={{ fontSize: 12, color: "#999", display: "block", marginBottom: 6 }}>Event type</label>
+                    <select style={{ width: "100%", border: "1.5px solid #E8E8E4", borderRadius: 8, padding: "10px 12px", fontSize: 13, color: "#1a1a1a", background: "#FAFAF9", outline: "none" }}>
+                      {EVENT_TYPES.slice(1).map((t) => <option key={t}>{t}</option>)}
+                    </select>
+                  </div>
                 </div>
-
-                <div style={{ marginBottom: 12 }}>
-                  <label style={{ fontSize: 12, color: "#999", display: "block", marginBottom: 6 }}>Event type</label>
-                  <select style={{ width: "100%", border: "1.5px solid #E8E8E4", borderRadius: 8, padding: "10px 12px", fontSize: 13, color: "#1a1a1a", background: "#FAFAF9", outline: "none" }}>
-                    {EVENT_TYPES.slice(1).map((t) => <option key={t}>{t}</option>)}
-                  </select>
-                </div>
-
                 <div style={{ marginBottom: 16 }}>
                   <label style={{ fontSize: 12, color: "#999", display: "block", marginBottom: 6 }}>Description</label>
-                  <textarea
-                    placeholder="Tell people about your meet..."
-                    rows={3}
-                    style={{ width: "100%", border: "1.5px solid #E8E8E4", borderRadius: 8, padding: "11px 14px", fontSize: 14, outline: "none", color: "#1a1a1a", background: "#FAFAF9", resize: "vertical", fontFamily: "inherit" }}
-                  />
+                  <textarea placeholder="Tell people about your meet..." rows={3}
+                    style={{ width: "100%", border: "1.5px solid #E8E8E4", borderRadius: 8, padding: "11px 14px", fontSize: 14, outline: "none", color: "#1a1a1a", background: "#FAFAF9", resize: "vertical", fontFamily: "inherit" }} />
                 </div>
-
-                <button style={{ width: "100%", background: "#1a1a1a", color: "white", border: "none", borderRadius: 8, padding: "13px", fontSize: 14, fontWeight: 500, cursor: "pointer" }}>
+                <button style={{ background: "#1a1a1a", color: "white", border: "none", borderRadius: 8, padding: "12px 28px", fontSize: 14, fontWeight: 500, cursor: "pointer" }}>
                   Submit for Review →
                 </button>
               </div>
             )}
           </div>
-        </div>{/* end hero-grid */}
-        </div>{/* end z-2 container */}
+
+          {/* Stats row */}
+          <div className="stats-row" style={{ display: "flex", gap: 40, marginTop: 28, paddingLeft: 4 }}>
+            {[["248", "Active meets"], ["34", "Cities"], ["12k", "Enthusiasts"]].map(([num, label]) => (
+              <div key={label}>
+                <div style={{ fontSize: 24, fontWeight: 600, color: "#1a1a1a" }}>{num}</div>
+                <div style={{ fontSize: 12, color: "#bbb", marginTop: 2 }}>{label}</div>
+              </div>
+            ))}
+          </div>
+        </div>
       </section>
 
       {/* RESULTS — only show after search or mode=find */}
