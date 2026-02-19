@@ -152,7 +152,6 @@ export default function Home() {
 
         {/* Headline centered over the cars */}
         <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center", textAlign: "center", padding: "0 32px" }}>
-          <div style={{ fontSize: 11, letterSpacing: "0.18em", textTransform: "uppercase", color: "rgba(255,255,255,0.75)", marginBottom: 12 }}>Car meet discovery</div>
           <h1 style={{ fontSize: 56, fontWeight: 300, lineHeight: 1.08, letterSpacing: "-0.02em", margin: 0, color: "white", textShadow: "0 2px 24px rgba(0,0,0,0.35)" }}>
             Find <span style={{ fontWeight: 700 }}>car meets</span> near you.
           </h1>
