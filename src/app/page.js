@@ -147,14 +147,14 @@ export default function Home() {
           backgroundSize: "cover",
           backgroundPosition: "center 45%",
         }} />
-        {/* Only a subtle bottom fade to white */}
-        <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to bottom, rgba(0,0,0,0.15) 0%, transparent 40%, rgba(250,250,249,0.85) 85%, #FAFAF9 100%)" }} />
+        {/* Overlays for readability */}
+        <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to bottom, rgba(0,0,0,0.2) 0%, rgba(0,0,0,0.35) 50%, rgba(250,250,249,0.9) 90%, #FAFAF9 100%)" }} />
 
-        {/* Headline overlaid on image */}
-        <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", justifyContent: "flex-end", padding: "0 48px 48px" }}>
-          <div style={{ fontSize: 11, letterSpacing: "0.14em", textTransform: "uppercase", color: "rgba(255,255,255,0.7)", marginBottom: 10 }}>Car meet discovery</div>
-          <h1 style={{ fontSize: 52, fontWeight: 300, lineHeight: 1.08, letterSpacing: "-0.02em", margin: 0, color: "#1a1a1a" }}>
-            Find meets <span style={{ fontWeight: 700 }}>near you.</span>
+        {/* Headline centered over the cars */}
+        <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center", textAlign: "center", padding: "0 32px" }}>
+          <div style={{ fontSize: 11, letterSpacing: "0.18em", textTransform: "uppercase", color: "rgba(255,255,255,0.75)", marginBottom: 12 }}>Car meet discovery</div>
+          <h1 style={{ fontSize: 56, fontWeight: 300, lineHeight: 1.08, letterSpacing: "-0.02em", margin: 0, color: "white", textShadow: "0 2px 24px rgba(0,0,0,0.35)" }}>
+            Find <span style={{ fontWeight: 700 }}>car meets</span> near you.
           </h1>
         </div>
       </section>
