@@ -148,7 +148,7 @@ export default function Home() {
           {/* LEFT: headline + intent split */}
           <div className="hero-text">
             <h1 style={{ fontSize: 48, fontWeight: 300, lineHeight: 1.1, letterSpacing: "-0.02em", marginBottom: 16, margin: "0 0 16px" }}>
-              Find meets <span style={{ fontWeight: 600 }}>near you.</span>
+              Find car meets <span style={{ fontWeight: 600 }}>near you.</span>
             </h1>
             <p style={{ fontSize: 16, color: "#777", lineHeight: 1.65, marginBottom: 32, maxWidth: 420 }}>
               No more digging through Facebook groups and Instagram stories. Every local car meet, organized in one place.
