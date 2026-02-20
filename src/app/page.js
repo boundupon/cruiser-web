@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "next/navigation";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
 const ADMIN_SECRET = process.env.NEXT_PUBLIC_ADMIN_SECRET || "";
@@ -15,10 +16,11 @@ function formatDatePretty(iso) {
 }
 
 export default function Home() {
+  const searchParams = useSearchParams();
   const [meets, setMeets] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [mode, setMode] = useState("find");
+  const [mode, setMode] = useState(() => searchParams.get("admin") === "true" ? "admin" : "find");
 
   const [location, setLocation] = useState("");
   const [showFilters, setShowFilters] = useState(false);
@@ -219,8 +221,6 @@ export default function Home() {
             {["Events", "Submit Event", "About"].map((l) => (
               <a key={l} className="nav-link" href="#" style={{ fontSize: 14, color: "#888", textDecoration: "none", transition: "color 0.15s" }}>{l}</a>
             ))}
-            <a className="nav-link" href="#" onClick={(e) => { e.preventDefault(); setMode("admin"); }}
-              style={{ fontSize: 14, color: "#ccc", textDecoration: "none", transition: "color 0.15s" }}>Admin</a>
           </nav>
           <div style={{ display: "flex", gap: 8 }}>
             <button style={{ background: "none", border: "1.5px solid #E0E0DC", borderRadius: 8, padding: "8px 16px", fontSize: 14, color: "#555", cursor: "pointer" }}>Sign in</button>
