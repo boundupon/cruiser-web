@@ -358,7 +358,7 @@ export default function Home() {
                 <div style={{ padding: "20px" }}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 10 }}>
                     <span style={{ fontSize: 11, background: "#F5F5F3", color: "#777", padding: "4px 10px", borderRadius: 100, letterSpacing: "0.05em" }}>
-                      {m.type || "Meet"}
+                      {m.event_type || "Meet"}
                     </span>
                     <span style={{ fontSize: 12, color: "#aaa" }}>{formatDatePretty(m.date)}</span>
                   </div>
@@ -367,7 +367,7 @@ export default function Home() {
                   <p style={{ fontSize: 13, color: "#888", margin: "0 0 16px" }}>📍 {m.city || "Location TBD"}</p>
 
                   <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", borderTop: "1px solid #F0EFEB", paddingTop: 14 }}>
-                    <span style={{ fontSize: 13, color: "#888" }}>by {m.host || "Anonymous"}</span>
+                    <span style={{ fontSize: 13, color: "#888" }}>by {m.host_name || "Anonymous"}</span>
                     <a
                       href={`${API_BASE}/meets/${m.id}`}
                       target="_blank"
