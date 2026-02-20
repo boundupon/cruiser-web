@@ -71,6 +71,9 @@ function MeetDetailInner() {
   // Share
   const [copied, setCopied] = useState(false);
 
+  // Map coords from geocoding
+  const [mapCoords, setMapCoords] = useState(null);
+
   // Responsive
   const [isMobile, setIsMobile] = useState(false);
   useEffect(() => {
@@ -104,6 +107,27 @@ function MeetDetailInner() {
     }
     if (id) load();
   }, [id]);
+
+  // Geocode address for map
+  useEffect(() => {
+    async function geocode() {
+      if (!meet) return;
+      const query = [meet.location, meet.city].filter(Boolean).join(", ");
+      try {
+        const res = await fetch(
+          `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&limit=1`,
+          { headers: { "Accept-Language": "en" } }
+        );
+        const data = await res.json();
+        if (data && data[0]) {
+          setMapCoords({ lat: parseFloat(data[0].lat), lon: parseFloat(data[0].lon) });
+        }
+      } catch (e) {
+        console.error("Geocoding failed:", e);
+      }
+    }
+    geocode();
+  }, [meet]);
 
   // Load RSVPs
   useEffect(() => {
@@ -438,21 +462,22 @@ function MeetDetailInner() {
           {/* MAP SECTION */}
           <div style={{ marginBottom: 40 }}>
             <h2 style={{ fontSize: 18, fontWeight: 600, margin: "0 0 16px" }}>Location</h2>
-            <div style={{ borderRadius: 12, overflow: "hidden", border: "1.5px solid #E8E8E4", position: "relative" }}>
-              <iframe
-                title="Meet location map"
-                width="100%"
-                height={isMobile ? 240 : 340}
-                frameBorder="0"
-                scrolling="no"
-                src={`https://www.openstreetmap.org/export/embed.html?bbox=${encodeURIComponent(
-                  (() => {
-                    const q = [meet.location, meet.city].filter(Boolean).join(" ");
-                    return q;
-                  })()
-                )}&layer=mapnik&marker=${encodeURIComponent([meet.location, meet.city].filter(Boolean).join(", "))}`}
-                style={{ display: "block" }}
-              />
+            <div style={{ borderRadius: 12, overflow: "hidden", border: "1.5px solid #E8E8E4", position: "relative", background: "#f0efeb" }}>
+              {mapCoords ? (
+                <iframe
+                  title="Meet location map"
+                  width="100%"
+                  height={isMobile ? 240 : 340}
+                  frameBorder="0"
+                  scrolling="no"
+                  src={`https://www.openstreetmap.org/export/embed.html?bbox=${mapCoords.lon - 0.01},${mapCoords.lat - 0.007},${mapCoords.lon + 0.01},${mapCoords.lat + 0.007}&layer=mapnik&marker=${mapCoords.lat},${mapCoords.lon}`}
+                  style={{ display: "block" }}
+                />
+              ) : (
+                <div style={{ height: isMobile ? 240 : 340, display: "flex", alignItems: "center", justifyContent: "center", color: "#aaa", fontSize: 14 }}>
+                  Loading map...
+                </div>
+              )}
               <a href={mapsUrl} target="_blank" rel="noreferrer"
                 style={{
                   position: "absolute", bottom: 12, right: 12,
