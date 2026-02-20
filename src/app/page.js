@@ -28,8 +28,19 @@ export default function Home() {
   const [dateTo, setDateTo] = useState("");
   const [searched, setSearched] = useState(false);
 
-  // pagination
-  const PAGE_SIZE = 6;
+  // host form state
+  const [hostTitle, setHostTitle] = useState("");
+  const [hostCity, setHostCity] = useState("");
+  const [hostLocation, setHostLocation] = useState("");
+  const [hostName, setHostName] = useState("");
+  const [hostContact, setHostContact] = useState("");
+  const [hostDate, setHostDate] = useState("");
+  const [hostTime, setHostTime] = useState("");
+  const [hostEventType, setHostEventType] = useState("Cars & Coffee");
+  const [hostDescription, setHostDescription] = useState("");
+  const [hostSubmitting, setHostSubmitting] = useState(false);
+  const [hostSuccess, setHostSuccess] = useState(false);
+  const [hostError, setHostError] = useState("");
   const [page, setPage] = useState(1);
 
   useEffect(() => {
@@ -84,7 +95,39 @@ export default function Home() {
     setSearched(true);
   }
 
-  function clearAll() {
+  async function handleHostSubmit(e) {
+    e.preventDefault();
+    setHostSubmitting(true);
+    setHostError("");
+    try {
+      const res = await fetch(`${API_BASE}/meets`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title: hostTitle,
+          city: hostCity,
+          location: hostLocation,
+          host_name: hostName,
+          host_contact: hostContact,
+          date: hostDate,
+          time: hostTime,
+          event_type: hostEventType,
+          description: hostDescription,
+        }),
+      });
+      if (!res.ok) throw new Error("Submission failed");
+      setHostSuccess(true);
+      // reset form
+      setHostTitle(""); setHostCity(""); setHostLocation("");
+      setHostName(""); setHostContact(""); setHostDate("");
+      setHostTime(""); setHostDescription("");
+      setHostEventType("Cars & Coffee");
+    } catch (err) {
+      setHostError("Something went wrong. Please try again.");
+    } finally {
+      setHostSubmitting(false);
+    }
+  }
     setLocation("");
     setEventType("All Types");
     setRadius("25 mi");
@@ -263,43 +306,85 @@ export default function Home() {
             ) : (
               /* HOST FORM */
               <div>
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12, marginBottom: 12 }}>
-                  {[
-                    { label: "Event title", placeholder: "e.g. Sunday Morning Cars & Coffee", col: "1 / -1" },
-                    { label: "Location / city", placeholder: "e.g. Norfolk, VA" },
-                    { label: "Host name", placeholder: "Your name or group" },
-                  ].map(({ label, placeholder, col }) => (
-                    <div key={label} style={{ gridColumn: col }}>
-                      <label style={{ fontSize: 12, color: "#999", display: "block", marginBottom: 6 }}>{label}</label>
-                      <input placeholder={placeholder}
-                        style={{ width: "100%", border: "1.5px solid #E8E8E4", borderRadius: 8, padding: "11px 14px", fontSize: 14, outline: "none", color: "#1a1a1a", background: "#FAFAF9" }} />
+                {hostSuccess ? (
+                  <div style={{ textAlign: "center", padding: "32px 0" }}>
+                    <div style={{ fontSize: 32, marginBottom: 12 }}>🎉</div>
+                    <div style={{ fontSize: 16, fontWeight: 600, color: "#1a1a1a", marginBottom: 8 }}>Meet submitted for review!</div>
+                    <div style={{ fontSize: 14, color: "#888", marginBottom: 24 }}>We'll review your meet and approve it shortly.</div>
+                    <button onClick={() => setHostSuccess(false)}
+                      style={{ background: "#1a1a1a", color: "white", border: "none", borderRadius: 8, padding: "10px 24px", fontSize: 14, cursor: "pointer" }}>
+                      Submit another meet
+                    </button>
+                  </div>
+                ) : (
+                  <form onSubmit={handleHostSubmit}>
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12, marginBottom: 12 }}>
+                      <div style={{ gridColumn: "1 / -1" }}>
+                        <label style={{ fontSize: 12, color: "#999", display: "block", marginBottom: 6 }}>Event title *</label>
+                        <input required value={hostTitle} onChange={(e) => setHostTitle(e.target.value)}
+                          placeholder="e.g. Sunday Morning Cars & Coffee"
+                          style={{ width: "100%", border: "1.5px solid #E8E8E4", borderRadius: 8, padding: "11px 14px", fontSize: 14, outline: "none", color: "#1a1a1a", background: "#FAFAF9" }} />
+                      </div>
+                      <div>
+                        <label style={{ fontSize: 12, color: "#999", display: "block", marginBottom: 6 }}>City *</label>
+                        <input required value={hostCity} onChange={(e) => setHostCity(e.target.value)}
+                          placeholder="e.g. Norfolk"
+                          style={{ width: "100%", border: "1.5px solid #E8E8E4", borderRadius: 8, padding: "11px 14px", fontSize: 14, outline: "none", color: "#1a1a1a", background: "#FAFAF9" }} />
+                      </div>
+                      <div style={{ gridColumn: "2 / -1" }}>
+                        <label style={{ fontSize: 12, color: "#999", display: "block", marginBottom: 6 }}>Location / venue</label>
+                        <input value={hostLocation} onChange={(e) => setHostLocation(e.target.value)}
+                          placeholder="e.g. Waterside District"
+                          style={{ width: "100%", border: "1.5px solid #E8E8E4", borderRadius: 8, padding: "11px 14px", fontSize: 14, outline: "none", color: "#1a1a1a", background: "#FAFAF9" }} />
+                      </div>
+                      <div>
+                        <label style={{ fontSize: 12, color: "#999", display: "block", marginBottom: 6 }}>Host name *</label>
+                        <input required value={hostName} onChange={(e) => setHostName(e.target.value)}
+                          placeholder="Your name or group"
+                          style={{ width: "100%", border: "1.5px solid #E8E8E4", borderRadius: 8, padding: "11px 14px", fontSize: 14, outline: "none", color: "#1a1a1a", background: "#FAFAF9" }} />
+                      </div>
+                      <div style={{ gridColumn: "2 / -1" }}>
+                        <label style={{ fontSize: 12, color: "#999", display: "block", marginBottom: 6 }}>Contact (Instagram, phone, etc)</label>
+                        <input value={hostContact} onChange={(e) => setHostContact(e.target.value)}
+                          placeholder="e.g. @yourhandle"
+                          style={{ width: "100%", border: "1.5px solid #E8E8E4", borderRadius: 8, padding: "11px 14px", fontSize: 14, outline: "none", color: "#1a1a1a", background: "#FAFAF9" }} />
+                      </div>
+                      <div>
+                        <label style={{ fontSize: 12, color: "#999", display: "block", marginBottom: 6 }}>Date *</label>
+                        <input required type="date" value={hostDate} onChange={(e) => setHostDate(e.target.value)}
+                          style={{ width: "100%", border: "1.5px solid #E8E8E4", borderRadius: 8, padding: "10px 12px", fontSize: 13, color: "#1a1a1a", background: "#FAFAF9", outline: "none" }} />
+                      </div>
+                      <div>
+                        <label style={{ fontSize: 12, color: "#999", display: "block", marginBottom: 6 }}>Time *</label>
+                        <input required type="time" value={hostTime} onChange={(e) => setHostTime(e.target.value)}
+                          style={{ width: "100%", border: "1.5px solid #E8E8E4", borderRadius: 8, padding: "10px 12px", fontSize: 13, color: "#1a1a1a", background: "#FAFAF9", outline: "none" }} />
+                      </div>
+                      <div>
+                        <label style={{ fontSize: 12, color: "#999", display: "block", marginBottom: 6 }}>Event type *</label>
+                        <select required value={hostEventType} onChange={(e) => setHostEventType(e.target.value)}
+                          style={{ width: "100%", border: "1.5px solid #E8E8E4", borderRadius: 8, padding: "10px 12px", fontSize: 13, color: "#1a1a1a", background: "#FAFAF9", outline: "none" }}>
+                          {EVENT_TYPES.slice(1).map((t) => <option key={t}>{t}</option>)}
+                        </select>
+                      </div>
                     </div>
-                  ))}
-                  <div>
-                    <label style={{ fontSize: 12, color: "#999", display: "block", marginBottom: 6 }}>Date</label>
-                    <input type="date" style={{ width: "100%", border: "1.5px solid #E8E8E4", borderRadius: 8, padding: "10px 12px", fontSize: 13, color: "#1a1a1a", background: "#FAFAF9", outline: "none" }} />
-                  </div>
-                  <div>
-                    <label style={{ fontSize: 12, color: "#999", display: "block", marginBottom: 6 }}>Time</label>
-                    <input type="time" style={{ width: "100%", border: "1.5px solid #E8E8E4", borderRadius: 8, padding: "10px 12px", fontSize: 13, color: "#1a1a1a", background: "#FAFAF9", outline: "none" }} />
-                  </div>
-                  <div>
-                    <label style={{ fontSize: 12, color: "#999", display: "block", marginBottom: 6 }}>Event type</label>
-                    <select style={{ width: "100%", border: "1.5px solid #E8E8E4", borderRadius: 8, padding: "10px 12px", fontSize: 13, color: "#1a1a1a", background: "#FAFAF9", outline: "none" }}>
-                      {EVENT_TYPES.slice(1).map((t) => <option key={t}>{t}</option>)}
-                    </select>
-                  </div>
-                </div>
-                <div style={{ marginBottom: 16 }}>
-                  <label style={{ fontSize: 12, color: "#999", display: "block", marginBottom: 6 }}>Description</label>
-                  <textarea placeholder="Tell people about your meet..." rows={3}
-                    style={{ width: "100%", border: "1.5px solid #E8E8E4", borderRadius: 8, padding: "11px 14px", fontSize: 14, outline: "none", color: "#1a1a1a", background: "#FAFAF9", resize: "vertical", fontFamily: "inherit" }} />
-                </div>
-                <button style={{ background: "#1a1a1a", color: "white", border: "none", borderRadius: 8, padding: "12px 28px", fontSize: 14, fontWeight: 500, cursor: "pointer" }}>
-                  Submit for Review →
-                </button>
+                    <div style={{ marginBottom: 16 }}>
+                      <label style={{ fontSize: 12, color: "#999", display: "block", marginBottom: 6 }}>Description</label>
+                      <textarea value={hostDescription} onChange={(e) => setHostDescription(e.target.value)}
+                        placeholder="Tell people about your meet..." rows={3}
+                        style={{ width: "100%", border: "1.5px solid #E8E8E4", borderRadius: 8, padding: "11px 14px", fontSize: 14, outline: "none", color: "#1a1a1a", background: "#FAFAF9", resize: "vertical", fontFamily: "inherit" }} />
+                    </div>
+                    {hostError && (
+                      <div style={{ background: "#FEF2F2", border: "1px solid #FECACA", borderRadius: 8, padding: "10px 14px", fontSize: 13, color: "#991B1B", marginBottom: 12 }}>
+                        {hostError}
+                      </div>
+                    )}
+                    <button type="submit" disabled={hostSubmitting}
+                      style={{ background: "#1a1a1a", color: "white", border: "none", borderRadius: 8, padding: "12px 28px", fontSize: 14, fontWeight: 500, cursor: hostSubmitting ? "not-allowed" : "pointer", opacity: hostSubmitting ? 0.7 : 1 }}>
+                      {hostSubmitting ? "Submitting..." : "Submit for Review →"}
+                    </button>
+                  </form>
+                )}
               </div>
-            )}
           </div>
 
           {/* Stats row */}
