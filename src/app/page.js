@@ -63,6 +63,16 @@ function HomeInner() {
   const [adminAuthed, setAdminAuthed] = useState(false);
   const [adminActionMsg, setAdminActionMsg] = useState("");
 
+  // Responsive
+  const [isMobile, setIsMobile] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth < 768);
+    check();
+    window.addEventListener("resize", check);
+    return () => window.removeEventListener("resize", check);
+  }, []);
+
   useEffect(() => {
     // Get initial session
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -276,21 +286,35 @@ function HomeInner() {
         .meet-card:hover { border-color: #d0d0cc !important; box-shadow: 0 4px 24px rgba(0,0,0,0.07) !important; transform: translateY(-1px); }
         .chip:hover { border-color: #1a1a1a !important; color: #1a1a1a !important; }
         .nav-link:hover { color: #1a1a1a !important; }
+        .hamburger { display: none; background: none; border: none; cursor: pointer; padding: 4px; }
+        @media (max-width: 767px) {
+          .desktop-nav { display: none !important; }
+          .desktop-auth { display: none !important; }
+          .hamburger { display: flex !important; align-items: center; justify-content: center; }
+          .mobile-menu { position: absolute; top: 60px; left: 0; right: 0; background: #FAFAF9; border-bottom: 1px solid #ECEAE6; padding: 16px 24px; display: flex; flex-direction: column; gap: 0; z-index: 100; }
+          .mobile-menu a, .mobile-menu button { font-size: 15px; padding: 14px 0; border-bottom: 1px solid #F0EFEB; text-align: left; background: none; border-left: none; border-right: none; border-top: none; cursor: pointer; color: #1a1a1a; text-decoration: none; font-family: inherit; }
+          .mobile-menu button.primary { background: #1a1a1a; color: white; border-radius: 8px; padding: 12px 0; text-align: center; margin-top: 8px; border: none; font-weight: 500; }
+        }
       `}</style>
 
       {/* NAV */}
       <header style={{ borderBottom: "1px solid #ECEAE6", background: "#FAFAF9", position: "sticky", top: 0, zIndex: 50 }}>
-        <div style={{ maxWidth: 1100, margin: "0 auto", padding: "0 32px", display: "flex", alignItems: "center", justifyContent: "space-between", height: 60, position: "relative" }}>
-          <button onClick={clearAll} style={{ display: "flex", alignItems: "center", gap: 10, background: "none", border: "none", cursor: "pointer", padding: 0 }}>
+        <div style={{ maxWidth: 1100, margin: "0 auto", padding: "0 20px", display: "flex", alignItems: "center", justifyContent: "space-between", height: 60, position: "relative" }}>
+          {/* Logo */}
+          <button onClick={clearAll} style={{ display: "flex", alignItems: "center", gap: 10, background: "none", border: "none", cursor: "pointer", padding: 0, zIndex: 101 }}>
             <div style={{ width: 32, height: 32, background: "#1a1a1a", borderRadius: 8, display: "grid", placeItems: "center", color: "white", fontWeight: 700, fontSize: 14 }}>C</div>
             <span style={{ fontWeight: 600, fontSize: 15, color: "#1a1a1a" }}>Cruiser</span>
           </button>
-          <nav style={{ display: "flex", gap: 28, position: "absolute", left: "50%", transform: "translateX(-50%)" }}>
+
+          {/* Desktop center nav */}
+          <nav className="desktop-nav" style={{ display: "flex", gap: 28, position: "absolute", left: "50%", transform: "translateX(-50%)" }}>
             {["Events", "Submit Event", "About"].map((l) => (
               <a key={l} className="nav-link" href="#" style={{ fontSize: 14, color: "#888", textDecoration: "none", transition: "color 0.15s" }}>{l}</a>
             ))}
           </nav>
-          <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+
+          {/* Desktop auth buttons */}
+          <div className="desktop-auth" style={{ display: "flex", gap: 8, alignItems: "center" }}>
             {user ? (
               <>
                 <span style={{ fontSize: 13, color: "#888" }}>{user.email?.split("@")[0]}</span>
@@ -312,22 +336,61 @@ function HomeInner() {
               </>
             )}
           </div>
+
+          {/* Hamburger (mobile only) */}
+          <button className="hamburger" onClick={() => setMenuOpen(!menuOpen)} style={{ zIndex: 101 }}
+            aria-label="Menu">
+            <svg width="22" height="22" viewBox="0 0 22 22" fill="none">
+              {menuOpen ? (
+                <>
+                  <line x1="4" y1="4" x2="18" y2="18" stroke="#1a1a1a" strokeWidth="2" strokeLinecap="round"/>
+                  <line x1="18" y1="4" x2="4" y2="18" stroke="#1a1a1a" strokeWidth="2" strokeLinecap="round"/>
+                </>
+              ) : (
+                <>
+                  <line x1="3" y1="6" x2="19" y2="6" stroke="#1a1a1a" strokeWidth="2" strokeLinecap="round"/>
+                  <line x1="3" y1="11" x2="19" y2="11" stroke="#1a1a1a" strokeWidth="2" strokeLinecap="round"/>
+                  <line x1="3" y1="16" x2="19" y2="16" stroke="#1a1a1a" strokeWidth="2" strokeLinecap="round"/>
+                </>
+              )}
+            </svg>
+          </button>
         </div>
+
+        {/* Mobile dropdown menu */}
+        {menuOpen && (
+          <div className="mobile-menu">
+            <a href="#" onClick={() => setMenuOpen(false)}>Events</a>
+            <a href="#" onClick={() => { setMode("host"); setMenuOpen(false); }}>Submit Event</a>
+            <a href="#">About</a>
+            {user ? (
+              <>
+                <span style={{ fontSize: 13, color: "#888", padding: "14px 0", borderBottom: "1px solid #F0EFEB" }}>{user.email?.split("@")[0]}</span>
+                <button onClick={() => { supabase.auth.signOut(); setMenuOpen(false); }}>Sign out</button>
+              </>
+            ) : (
+              <>
+                <button onClick={() => { setAuthTab("signin"); setShowAuth(true); setMenuOpen(false); }}>Sign in</button>
+                <button className="primary" onClick={() => { setAuthTab("signup"); setShowAuth(true); setMenuOpen(false); }}>Sign up</button>
+              </>
+            )}
+          </div>
+        )}
       </header>
 
       {/* HERO */}
-      <section style={{ position: "relative", height: 480, overflow: "hidden" }}>
+      <section style={{ position: "relative", height: isMobile ? 320 : 480, overflow: "hidden" }}>
         <div style={{ position: "absolute", inset: 0, backgroundImage: "url('/hero.jpg')", backgroundSize: "cover", backgroundPosition: "center 45%" }} />
         <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to bottom, rgba(0,0,0,0.2) 0%, rgba(0,0,0,0.35) 50%, rgba(250,250,249,0.9) 90%, #FAFAF9 100%)" }} />
-        <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center", textAlign: "center", padding: "0 32px" }}>
-          <h1 style={{ fontSize: 56, fontWeight: 300, lineHeight: 1.08, letterSpacing: "-0.02em", margin: 0, color: "white", textShadow: "0 2px 24px rgba(0,0,0,0.35)" }}>
+        <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center", textAlign: "center", padding: "0 20px" }}>
+          <h1 style={{ fontSize: isMobile ? 32 : 56, fontWeight: 300, lineHeight: 1.08, letterSpacing: "-0.02em", margin: 0, color: "white", textShadow: "0 2px 24px rgba(0,0,0,0.35)" }}>
             Find <span style={{ fontWeight: 700 }}>car meets</span> near you.
           </h1>
         </div>
       </section>
 
       {/* SEARCH PANEL */}
-      <section style={{ background: "#FAFAF9", padding: "0 32px 48px" }}>
+      <section style={{ background: "#FAFAF9", padding: isMobile ? "0 16px 32px" : "0 32px 48px" }}>
         <div style={{ maxWidth: 860, margin: "0 auto" }}>
 
           {/* Toggle */}
@@ -348,7 +411,7 @@ function HomeInner() {
           <div style={{ background: "white", border: "1.5px solid #E8E8E4", borderRadius: 16, padding: 28, boxShadow: "0 2px 24px rgba(0,0,0,0.05)" }}>
             {mode !== "host" ? (
               <form onSubmit={handleSearch}>
-                <div style={{ display: "grid", gridTemplateColumns: "1fr auto", gap: 12, alignItems: "end", marginBottom: 16 }}>
+                <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr auto", gap: 12, alignItems: "end", marginBottom: 16 }}>
                   <div>
                     <label style={lbl}>City or zip code</label>
                     <input value={location} onChange={(e) => setLocation(e.target.value)}
@@ -374,7 +437,7 @@ function HomeInner() {
                   {showFilters ? "- Hide filters" : "+ More filters"}
                 </button>
                 {showFilters && (
-                  <div style={{ borderTop: "1px solid #F0EFEB", paddingTop: 16, marginTop: 12, display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12 }}>
+                  <div style={{ borderTop: "1px solid #F0EFEB", paddingTop: 16, marginTop: 12, display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr 1fr", gap: 12 }}>
                     <div>
                       <label style={lbl}>Event type</label>
                       <select value={eventType} onChange={(e) => setEventType(e.target.value)} style={inpSm}>
@@ -416,8 +479,8 @@ function HomeInner() {
                   </div>
                 ) : (
                   <form onSubmit={handleHostSubmit}>
-                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12, marginBottom: 12 }}>
-                      <div style={{ gridColumn: "1 / -1" }}>
+                    <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr 1fr", gap: 12, marginBottom: 12 }}>
+                      <div style={{ gridColumn: isMobile ? "1" : "1 / -1" }}>
                         <label style={lbl}>Event title *</label>
                         <input required value={hostTitle} onChange={(e) => setHostTitle(e.target.value)}
                           placeholder="e.g. Sunday Morning Cars and Coffee" style={inp} />
@@ -427,7 +490,7 @@ function HomeInner() {
                         <input required value={hostCity} onChange={(e) => setHostCity(e.target.value)}
                           placeholder="e.g. Norfolk" style={inp} />
                       </div>
-                      <div style={{ gridColumn: "2 / -1" }}>
+                      <div style={{ gridColumn: isMobile ? "1" : "2 / -1" }}>
                         <label style={lbl}>Location / venue</label>
                         <input value={hostLocation} onChange={(e) => setHostLocation(e.target.value)}
                           placeholder="e.g. Waterside District" style={inp} />
@@ -437,7 +500,7 @@ function HomeInner() {
                         <input required value={hostName} onChange={(e) => setHostName(e.target.value)}
                           placeholder="Your name or group" style={inp} />
                       </div>
-                      <div style={{ gridColumn: "2 / -1" }}>
+                      <div style={{ gridColumn: isMobile ? "1" : "2 / -1" }}>
                         <label style={lbl}>Contact (Instagram, phone, etc)</label>
                         <input value={hostContact} onChange={(e) => setHostContact(e.target.value)}
                           placeholder="e.g. @yourhandle" style={inp} />
@@ -517,7 +580,7 @@ function HomeInner() {
           </div>
 
           {/* Stats */}
-          <div style={{ display: "flex", gap: 40, marginTop: 28, paddingLeft: 4 }}>
+          <div style={{ display: "flex", gap: isMobile ? 24 : 40, marginTop: 28, paddingLeft: 4 }}>
             {[["248", "Active meets"], ["34", "Cities"], ["12k", "Enthusiasts"]].map(([num, label]) => (
               <div key={label}>
                 <div style={{ fontSize: 24, fontWeight: 600 }}>{num}</div>
@@ -530,7 +593,7 @@ function HomeInner() {
 
       {/* RESULTS */}
       {mode === "find" && (
-        <section style={{ maxWidth: 1100, margin: "0 auto", padding: "0 32px 64px" }}>
+        <section style={{ maxWidth: 1100, margin: "0 auto", padding: isMobile ? "0 16px 48px" : "0 32px 64px" }}>
           <div style={{ borderTop: "1px solid #ECEAE6", paddingTop: 40, marginBottom: 24, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
             <h2 style={{ fontSize: 18, fontWeight: 600, margin: 0 }}>
               {loading ? "Loading meets..." : `${filtered.length} meet${filtered.length === 1 ? "" : "s"} found`}
