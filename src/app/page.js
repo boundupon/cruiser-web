@@ -17,6 +17,30 @@ function formatDatePretty(iso) {
   }
 }
 
+// Haversine formula — returns distance in miles between two lat/lon points
+function haversineDistance(lat1, lon1, lat2, lon2) {
+  const R = 3958.8; // Earth radius in miles
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLon = (lon2 - lon1) * Math.PI / 180;
+  const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+    Math.sin(dLon/2) * Math.sin(dLon/2);
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
+// Geocode a city string to {lat, lon} using Nominatim
+async function geocodeCity(city) {
+  try {
+    const res = await fetch(
+      `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(city)}&format=json&limit=1&countrycodes=us`,
+      { headers: { "Accept-Language": "en" } }
+    );
+    const data = await res.json();
+    if (data && data[0]) return { lat: parseFloat(data[0].lat), lon: parseFloat(data[0].lon) };
+  } catch (e) { console.error("Geocode error:", e); }
+  return null;
+}
+
 function HomeInner() {
   const searchParams = useSearchParams();
   const [user, setUser] = useState(null);
@@ -28,12 +52,17 @@ function HomeInner() {
   const [mode, setMode] = useState(() => searchParams.get("admin") === "true" ? "admin" : "find");
 
   const [location, setLocation] = useState("");
+  const [locationState, setLocationState] = useState("");
+  const [detectedLocation, setDetectedLocation] = useState(""); // confirmed geocode result
   const [showFilters, setShowFilters] = useState(false);
   const [eventType, setEventType] = useState("All Types");
   const [radius, setRadius] = useState("25 mi");
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
   const [searched, setSearched] = useState(false);
+  const [searchCoords, setSearchCoords] = useState(null); // {lat, lon} of searched location
+  const [meetCoords, setMeetCoords] = useState({}); // {meetId: {lat, lon}}
+  const [geoLoading, setGeoLoading] = useState(false);
 
   const [hostTitle, setHostTitle] = useState("");
   const [hostCity, setHostCity] = useState("");
@@ -109,10 +138,24 @@ function HomeInner() {
   const filtered = useMemo(() => {
     let list = [...meets];
     if (location.trim()) {
-      const needle = location.trim().toLowerCase();
-      list = list.filter((m) =>
-        `${m.city || ""} ${m.title || ""}`.toLowerCase().includes(needle)
-      );
+      if (searchCoords) {
+        // Radius-based filtering using real distance
+        const radiusMiles = parseInt(radius) || 25;
+        list = list.filter((m) => {
+          const mc = meetCoords[m.id];
+          if (!mc) {
+            // Fall back to city text match if coords not loaded yet
+            return (m.city || "").toLowerCase().includes(location.trim().toLowerCase());
+          }
+          return haversineDistance(searchCoords.lat, searchCoords.lon, mc.lat, mc.lon) <= radiusMiles;
+        });
+      } else {
+        // Fallback text match while geocoding or if geocode failed
+        const needle = [location.trim(), locationState.trim()].filter(Boolean).join(" ").toLowerCase();
+        list = list.filter((m) =>
+          `${m.city || ""} ${m.title || ""}`.toLowerCase().includes(location.trim().toLowerCase())
+        );
+      }
     }
     if (eventType !== "All Types") {
       list = list.filter((m) => (m.event_type || "").toLowerCase() === eventType.toLowerCase());
@@ -120,7 +163,7 @@ function HomeInner() {
     if (dateFrom) list = list.filter((m) => (m.date || "") >= dateFrom);
     if (dateTo) list = list.filter((m) => (m.date || "") <= dateTo);
     return list;
-  }, [meets, location, eventType, dateFrom, dateTo]);
+  }, [meets, location, locationState, searchCoords, meetCoords, radius, eventType, dateFrom, dateTo]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const pageSafe = Math.min(Math.max(1, page), totalPages);
@@ -131,19 +174,65 @@ function HomeInner() {
 
   useEffect(() => { setPage(1); }, [location, eventType, dateFrom, dateTo]);
 
-  function handleSearch(e) {
+  async function handleSearch(e) {
     e.preventDefault();
     setMode("find");
     setSearched(true);
+    const query = [location.trim(), locationState.trim()].filter(Boolean).join(", ");
+    if (query) {
+      setGeoLoading(true);
+      // Geocode and capture the display name
+      try {
+        const res = await fetch(
+          `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&limit=1&countrycodes=us`,
+          { headers: { "Accept-Language": "en" } }
+        );
+        const data = await res.json();
+        if (data && data[0]) {
+          const coords = { lat: parseFloat(data[0].lat), lon: parseFloat(data[0].lon) };
+          setSearchCoords(coords);
+          // Build a clean display name e.g. "Norfolk, Virginia"
+          const parts = (data[0].display_name || "").split(",");
+          setDetectedLocation(parts.slice(0, 2).join(",").trim());
+        } else {
+          setSearchCoords(null);
+          setDetectedLocation("");
+        }
+      } catch (e) {
+        console.error("Geocode error:", e);
+        setSearchCoords(null);
+      }
+      // Geocode all meets that don't have coords yet
+      if (coords) {
+        const missing = meets.filter(m => m.city && !meetCoords[m.id]);
+        const results = await Promise.all(
+          missing.map(async (m) => {
+            const c = await geocodeCity(m.city);
+            return { id: m.id, coords: c };
+          })
+        );
+        setMeetCoords(prev => {
+          const next = { ...prev };
+          results.forEach(({ id, coords }) => { if (coords) next[id] = coords; });
+          return next;
+        });
+      }
+      setGeoLoading(false);
+    } else {
+      setSearchCoords(null);
+    }
   }
 
   function clearAll() {
     setLocation("");
+    setLocationState("");
+    setDetectedLocation("");
     setEventType("All Types");
     setRadius("25 mi");
     setDateFrom("");
     setDateTo("");
     setSearched(false);
+    setSearchCoords(null);
     setMode("find");
   }
 
@@ -411,18 +500,33 @@ function HomeInner() {
           <div style={{ background: "white", border: "1.5px solid #E8E8E4", borderRadius: 16, padding: 28, boxShadow: "0 2px 24px rgba(0,0,0,0.05)" }}>
             {mode !== "host" ? (
               <form onSubmit={handleSearch}>
-                <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr auto", gap: 12, alignItems: "end", marginBottom: 16 }}>
+                <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "2fr 1fr auto", gap: 12, alignItems: "end", marginBottom: 16 }}>
                   <div>
                     <label style={lbl}>City or zip code</label>
                     <input value={location} onChange={(e) => setLocation(e.target.value)}
-                      placeholder="e.g. Norfolk, VA or 23510"
+                      placeholder="e.g. Norfolk or 23510"
                       style={{ ...inp, fontSize: 15 }} />
                   </div>
-                  <button type="submit"
-                    style={{ background: "#1a1a1a", color: "white", border: "none", borderRadius: 8, padding: "12px 28px", fontSize: 14, fontWeight: 500, cursor: "pointer", whiteSpace: "nowrap", height: 46 }}>
-                    Search Meets
+                  <div>
+                    <label style={lbl}>State <span style={{ color: "#ccc", fontWeight: 400 }}>(optional)</span></label>
+                    <input value={locationState} onChange={(e) => setLocationState(e.target.value)}
+                      placeholder="e.g. VA"
+                      maxLength={20}
+                      style={{ ...inp, fontSize: 15 }} />
+                  </div>
+                  <button type="submit" disabled={geoLoading}
+                    style={{ background: "#1a1a1a", color: "white", border: "none", borderRadius: 8, padding: "12px 28px", fontSize: 14, fontWeight: 500, cursor: geoLoading ? "not-allowed" : "pointer", whiteSpace: "nowrap", height: 46, opacity: geoLoading ? 0.7 : 1 }}>
+                    {geoLoading ? "Searching..." : "Search Meets"}
                   </button>
                 </div>
+                {detectedLocation && !geoLoading && (
+                  <div style={{ fontSize: 12, color: "#888", marginBottom: 12, display: "flex", alignItems: "center", gap: 6 }}>
+                    <span style={{ color: "#22c55e" }}>📍</span>
+                    Searching near <strong style={{ color: "#1a1a1a" }}>{detectedLocation}</strong>
+                    <span style={{ color: "#bbb", margin: "0 4px" }}>·</span>
+                    <span>{radius} radius</span>
+                  </div>
+                )}
                 <div style={{ display: "flex", gap: 6, alignItems: "center", marginBottom: 12 }}>
                   <span style={{ fontSize: 12, color: "#aaa", marginRight: 4 }}>Radius:</span>
                   {RADII.map((r) => (
@@ -596,7 +700,7 @@ function HomeInner() {
         <section style={{ maxWidth: 1100, margin: "0 auto", padding: isMobile ? "0 16px 48px" : "0 32px 64px" }}>
           <div style={{ borderTop: "1px solid #ECEAE6", paddingTop: 40, marginBottom: 24, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
             <h2 style={{ fontSize: 18, fontWeight: 600, margin: 0 }}>
-              {loading ? "Loading meets..." : `${filtered.length} meet${filtered.length === 1 ? "" : "s"} found`}
+              {loading ? "Loading meets..." : geoLoading ? "Searching nearby..." : `${filtered.length} meet${filtered.length === 1 ? "" : "s"} found`}
             </h2>
             <button onClick={clearAll} style={{ background: "none", border: "1.5px solid #E8E8E4", borderRadius: 8, padding: "8px 16px", fontSize: 13, color: "#888", cursor: "pointer" }}>
               Clear search
