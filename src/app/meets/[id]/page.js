@@ -435,6 +435,43 @@ function MeetDetailInner() {
           {/* DIVIDER */}
           <div style={{ borderTop: "1px solid #ECEAE6", marginBottom: 32 }} />
 
+          {/* MAP SECTION */}
+          <div style={{ marginBottom: 40 }}>
+            <h2 style={{ fontSize: 18, fontWeight: 600, margin: "0 0 16px" }}>Location</h2>
+            <div style={{ borderRadius: 12, overflow: "hidden", border: "1.5px solid #E8E8E4", position: "relative" }}>
+              <iframe
+                title="Meet location map"
+                width="100%"
+                height={isMobile ? 240 : 340}
+                frameBorder="0"
+                scrolling="no"
+                src={`https://www.openstreetmap.org/export/embed.html?bbox=${encodeURIComponent(
+                  (() => {
+                    const q = [meet.location, meet.city].filter(Boolean).join(" ");
+                    return q;
+                  })()
+                )}&layer=mapnik&marker=${encodeURIComponent([meet.location, meet.city].filter(Boolean).join(", "))}`}
+                style={{ display: "block" }}
+              />
+              <a href={mapsUrl} target="_blank" rel="noreferrer"
+                style={{
+                  position: "absolute", bottom: 12, right: 12,
+                  background: "white", border: "1.5px solid #E8E8E4",
+                  borderRadius: 8, padding: "7px 14px", fontSize: 12,
+                  fontWeight: 500, color: "#1a1a1a", textDecoration: "none",
+                  boxShadow: "0 2px 8px rgba(0,0,0,0.08)",
+                }}>
+                Open in Google Maps ↗
+              </a>
+            </div>
+            <div style={{ fontSize: 13, color: "#888", marginTop: 8 }}>
+              📍 {[meet.location, meet.city].filter(Boolean).join(", ")}
+            </div>
+          </div>
+
+          {/* DIVIDER */}
+          <div style={{ borderTop: "1px solid #ECEAE6", marginBottom: 32 }} />
+
           {/* COMMENTS SECTION */}
           <div>
             <h2 style={{ fontSize: 18, fontWeight: 600, margin: "0 0 20px" }}>
