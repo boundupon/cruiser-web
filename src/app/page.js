@@ -21,6 +21,7 @@ function HomeInner() {
   const searchParams = useSearchParams();
   const [user, setUser] = useState(null);
   const [showAuth, setShowAuth] = useState(false);
+  const [authTab, setAuthTab] = useState("signin");
   const [meets, setMeets] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -214,7 +215,7 @@ function HomeInner() {
 
   return (
     <div style={{ minHeight: "100vh", background: "#FAFAF9", color: "#1a1a1a", fontFamily: "'DM Sans', -apple-system, sans-serif" }}>
-      {showAuth && <AuthModal onClose={() => setShowAuth(false)} onAuth={(u) => setUser(u)} />}
+      {showAuth && <AuthModal initialTab={authTab} onClose={() => setShowAuth(false)} onAuth={(u) => setUser(u)} />}
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&display=swap');
         * { box-sizing: border-box; }
@@ -250,11 +251,11 @@ function HomeInner() {
               </>
             ) : (
               <>
-                <button onClick={() => setShowAuth(true)}
+                <button onClick={() => { setAuthTab("signin"); setShowAuth(true); }}
                   style={{ background: "none", border: "1.5px solid #E0E0DC", borderRadius: 8, padding: "8px 16px", fontSize: 14, color: "#555", cursor: "pointer" }}>
                   Sign in
                 </button>
-                <button onClick={() => setShowAuth(true)}
+                <button onClick={() => { setAuthTab("signup"); setShowAuth(true); }}
                   style={{ background: "#1a1a1a", border: "none", borderRadius: 8, padding: "8px 16px", fontSize: 14, color: "white", fontWeight: 500, cursor: "pointer" }}>
                   Sign up
                 </button>
