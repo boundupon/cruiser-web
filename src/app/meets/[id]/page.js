@@ -341,126 +341,109 @@ function MeetDetailInner() {
           </div>
         </div>
 
-        <div style={{ padding: isMobile ? "24px 16px 0" : "32px 0 0" }}>
+        <div style={{ padding: isMobile ? "0 0 0" : "0" }}>
 
-          {/* INFO + ACTION BUTTONS ROW */}
-          <div style={{ display: "flex", flexDirection: isMobile ? "column" : "row", gap: 24, marginBottom: 32 }}>
+          {/* OPTION B — Two Column Panel */}
+          <div style={{
+            display: "grid",
+            gridTemplateColumns: isMobile ? "1fr" : "1fr 220px",
+            border: "1.5px solid #E8E8E4",
+            borderRadius: isMobile ? 0 : 16,
+            overflow: "hidden",
+            marginBottom: 32,
+            marginTop: isMobile ? 0 : 24,
+            background: "white",
+          }}>
 
-            {/* Left: Info */}
-            <div style={{ flex: 1 }}>
-              {/* Date / Time / Location */}
-              <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 20 }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                  <span style={{ fontSize: 18 }}>📅</span>
-                  <div>
-                    <div style={{ fontSize: 15, fontWeight: 500 }}>{formatDatePretty(meet.date)}</div>
-                    {meet.time && <div style={{ fontSize: 13, color: "#888" }}>{formatTime(meet.time)}</div>}
-                  </div>
+            {/* Left: Info + Description */}
+            <div style={{ padding: "28px 24px", borderRight: isMobile ? "none" : "1px solid #F0EFEB", borderBottom: isMobile ? "1px solid #F0EFEB" : "none" }}>
+              <div style={{ display: "flex", flexDirection: "column", gap: 18, marginBottom: 20 }}>
+                <div>
+                  <div style={{ fontSize: 11, color: "#bbb", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 3 }}>Date & Time</div>
+                  <div style={{ fontSize: 15, fontWeight: 500 }}>{formatDatePretty(meet.date)}</div>
+                  {meet.time && <div style={{ fontSize: 13, color: "#888", marginTop: 1 }}>{formatTime(meet.time)}</div>}
                 </div>
-                <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                  <span style={{ fontSize: 18 }}>📍</span>
-                  <div>
-                    <div style={{ fontSize: 15, fontWeight: 500 }}>{meet.location || meet.city}</div>
-                    {meet.location && <div style={{ fontSize: 13, color: "#888" }}>{meet.city}</div>}
-                  </div>
+                <div>
+                  <div style={{ fontSize: 11, color: "#bbb", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 3 }}>Location</div>
+                  <div style={{ fontSize: 15, fontWeight: 500 }}>{meet.location || meet.city}</div>
+                  {meet.location && <div style={{ fontSize: 13, color: "#888", marginTop: 1 }}>{meet.city}</div>}
                 </div>
-                <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                  <span style={{ fontSize: 18 }}>👤</span>
-                  <div>
-                    <div style={{ fontSize: 15, fontWeight: 500 }}>{meet.host_name || "Anonymous"}</div>
-                    {meet.host_contact && <div style={{ fontSize: 13, color: "#888" }}>{meet.host_contact}</div>}
-                  </div>
+                <div>
+                  <div style={{ fontSize: 11, color: "#bbb", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 3 }}>Hosted by</div>
+                  <div style={{ fontSize: 15, fontWeight: 500 }}>{meet.host_name || "Anonymous"}</div>
+                  {meet.host_contact && <div style={{ fontSize: 13, color: "#888", marginTop: 1 }}>{meet.host_contact}</div>}
                 </div>
               </div>
 
-              {/* Description */}
               {meet.description && (
-                <p style={{ fontSize: 15, color: "#444", lineHeight: 1.6, margin: "0 0 20px", padding: "16px", background: "white", border: "1.5px solid #E8E8E4", borderRadius: 12 }}>
-                  {meet.description}
-                </p>
+                <div style={{ borderTop: "1px solid #F0EFEB", paddingTop: 18 }}>
+                  <div style={{ fontSize: 11, color: "#bbb", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 8 }}>About this meet</div>
+                  <p style={{ fontSize: 14, color: "#555", lineHeight: 1.65, margin: 0 }}>{meet.description}</p>
+                </div>
               )}
             </div>
 
-            {/* Right: Actions */}
-            <div style={{ display: "flex", flexDirection: isMobile ? "row" : "column", gap: 10, flexShrink: 0, width: isMobile ? "100%" : 200 }}>
+            {/* Right: RSVP + Actions */}
+            <div style={{ padding: "24px", background: "#FAFAF9", display: "flex", flexDirection: "column", gap: 8 }}>
 
-              {/* RSVP: Going */}
-              <button className="action-btn" onClick={() => handleRsvp("going")} disabled={rsvpLoading}
-                style={{
-                  flex: isMobile ? 1 : "none",
-                  background: myRsvp === "going" ? "#1a1a1a" : "white",
-                  color: myRsvp === "going" ? "white" : "#1a1a1a",
-                  border: `1.5px solid ${myRsvp === "going" ? "#1a1a1a" : "#E8E8E4"}`,
-                  borderRadius: 10, padding: "12px 16px", fontSize: 14, fontWeight: 500,
-                  cursor: rsvpLoading ? "not-allowed" : "pointer", textAlign: "center",
-                }}>
-                <div style={{ fontSize: 18, marginBottom: 2 }}>✅</div>
-                <div>Going</div>
-                <div style={{ fontSize: 12, opacity: 0.7, marginTop: 2 }}>{rsvpCounts.going} {rsvpCounts.going === 1 ? "person" : "people"}</div>
-              </button>
+              {/* RSVP buttons */}
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 4 }}>
+                <button onClick={() => handleRsvp("going")} disabled={rsvpLoading}
+                  style={{
+                    background: myRsvp === "going" ? "#1a1a1a" : "white",
+                    color: myRsvp === "going" ? "white" : "#1a1a1a",
+                    border: `1.5px solid ${myRsvp === "going" ? "#1a1a1a" : "#E8E8E4"}`,
+                    borderRadius: 8, padding: "11px 8px", fontSize: 13, fontWeight: 500,
+                    cursor: rsvpLoading ? "not-allowed" : "pointer", textAlign: "center",
+                  }}>
+                  {myRsvp === "going" ? "✓ " : ""}Going
+                  <div style={{ fontSize: 11, opacity: 0.55, marginTop: 2, fontWeight: 400 }}>{rsvpCounts.going} {rsvpCounts.going === 1 ? "person" : "people"}</div>
+                </button>
+                <button onClick={() => handleRsvp("maybe")} disabled={rsvpLoading}
+                  style={{
+                    background: myRsvp === "maybe" ? "#1a1a1a" : "white",
+                    color: myRsvp === "maybe" ? "white" : "#1a1a1a",
+                    border: `1.5px solid ${myRsvp === "maybe" ? "#1a1a1a" : "#E8E8E4"}`,
+                    borderRadius: 8, padding: "11px 8px", fontSize: 13, fontWeight: 500,
+                    cursor: rsvpLoading ? "not-allowed" : "pointer", textAlign: "center",
+                  }}>
+                  {myRsvp === "maybe" ? "✓ " : ""}Maybe
+                  <div style={{ fontSize: 11, opacity: 0.55, marginTop: 2, fontWeight: 400 }}>{rsvpCounts.maybe} {rsvpCounts.maybe === 1 ? "person" : "people"}</div>
+                </button>
+              </div>
 
-              {/* RSVP: Maybe */}
-              <button className="action-btn" onClick={() => handleRsvp("maybe")} disabled={rsvpLoading}
-                style={{
-                  flex: isMobile ? 1 : "none",
-                  background: myRsvp === "maybe" ? "#1a1a1a" : "white",
-                  color: myRsvp === "maybe" ? "white" : "#1a1a1a",
-                  border: `1.5px solid ${myRsvp === "maybe" ? "#1a1a1a" : "#E8E8E4"}`,
-                  borderRadius: 10, padding: "12px 16px", fontSize: 14, fontWeight: 500,
-                  cursor: rsvpLoading ? "not-allowed" : "pointer", textAlign: "center",
-                }}>
-                <div style={{ fontSize: 18, marginBottom: 2 }}>🤔</div>
-                <div>Maybe</div>
-                <div style={{ fontSize: 12, opacity: 0.7, marginTop: 2 }}>{rsvpCounts.maybe} {rsvpCounts.maybe === 1 ? "person" : "people"}</div>
-              </button>
-
-              {/* Map */}
-              <a href={mapsUrl} target="_blank" rel="noreferrer" className="action-btn"
-                style={{
-                  flex: isMobile ? 1 : "none",
-                  background: "white", color: "#1a1a1a",
-                  border: "1.5px solid #E8E8E4",
-                  borderRadius: 10, padding: "12px 16px", fontSize: 14, fontWeight: 500,
-                  cursor: "pointer", textAlign: "center", textDecoration: "none", display: "block",
-                }}>
-                <div style={{ fontSize: 18, marginBottom: 2 }}>🗺️</div>
-                <div>Map</div>
+              {/* Action buttons */}
+              <a href={mapsUrl} target="_blank" rel="noreferrer"
+                style={{ display: "flex", alignItems: "center", justifyContent: "space-between", background: "white", border: "1.5px solid #E8E8E4", borderRadius: 8, padding: "11px 14px", fontSize: 13, fontWeight: 500, color: "#1a1a1a", textDecoration: "none" }}>
+                Get Directions
+                <span style={{ color: "#bbb", fontSize: 12 }}>↗</span>
               </a>
 
-              {/* Calendar */}
-              <button className="action-btn" onClick={handleAddToCalendar}
-                style={{
-                  flex: isMobile ? 1 : "none",
-                  background: "white", color: "#1a1a1a",
-                  border: "1.5px solid #E8E8E4",
-                  borderRadius: 10, padding: "12px 16px", fontSize: 14, fontWeight: 500,
-                  cursor: "pointer", textAlign: "center",
-                }}>
-                <div style={{ fontSize: 18, marginBottom: 2 }}>🗓️</div>
-                <div>Calendar</div>
+              <button onClick={handleAddToCalendar}
+                style={{ display: "flex", alignItems: "center", justifyContent: "space-between", background: "white", border: "1.5px solid #E8E8E4", borderRadius: 8, padding: "11px 14px", fontSize: 13, fontWeight: 500, color: "#1a1a1a", cursor: "pointer", textAlign: "left" }}>
+                Add to Calendar
+                <span style={{ color: "#bbb", fontSize: 12 }}>↓</span>
               </button>
 
-              {/* Share */}
-              <button className="action-btn" onClick={handleShare}
+              <button onClick={handleShare}
                 style={{
-                  flex: isMobile ? 1 : "none",
+                  display: "flex", alignItems: "center", justifyContent: "space-between",
                   background: copied ? "#F0FDF4" : "white",
-                  color: copied ? "#166534" : "#1a1a1a",
                   border: `1.5px solid ${copied ? "#BBF7D0" : "#E8E8E4"}`,
-                  borderRadius: 10, padding: "12px 16px", fontSize: 14, fontWeight: 500,
-                  cursor: "pointer", textAlign: "center",
+                  borderRadius: 8, padding: "11px 14px", fontSize: 13, fontWeight: 500,
+                  color: copied ? "#166534" : "#1a1a1a", cursor: "pointer", textAlign: "left",
                 }}>
-                <div style={{ fontSize: 18, marginBottom: 2 }}>{copied ? "✓" : "🔗"}</div>
-                <div>{copied ? "Copied!" : "Share"}</div>
+                {copied ? "Link copied!" : "Share Event"}
+                <span style={{ color: copied ? "#166534" : "#bbb", fontSize: 12 }}>{copied ? "✓" : "⧉"}</span>
               </button>
             </div>
           </div>
 
           {/* DIVIDER */}
-          <div style={{ borderTop: "1px solid #ECEAE6", marginBottom: 32 }} />
+          <div style={{ borderTop: "1px solid #ECEAE6", marginBottom: 32, margin: isMobile ? "0 16px 32px" : "0 0 32px" }} />
 
           {/* MAP SECTION */}
-          <div style={{ marginBottom: 40 }}>
+          <div style={{ marginBottom: 40, padding: isMobile ? "0 16px" : 0 }}>
             <h2 style={{ fontSize: 18, fontWeight: 600, margin: "0 0 16px" }}>Location</h2>
             <div style={{ borderRadius: 12, overflow: "hidden", border: "1.5px solid #E8E8E4", position: "relative", background: "#f0efeb" }}>
               {mapCoords ? (
@@ -498,7 +481,7 @@ function MeetDetailInner() {
           <div style={{ borderTop: "1px solid #ECEAE6", marginBottom: 32 }} />
 
           {/* COMMENTS SECTION */}
-          <div>
+          <div style={{ padding: isMobile ? "0 16px" : 0 }}>
             <h2 style={{ fontSize: 18, fontWeight: 600, margin: "0 0 20px" }}>
               Comments <span style={{ fontSize: 14, fontWeight: 400, color: "#aaa" }}>({comments.length})</span>
             </h2>
