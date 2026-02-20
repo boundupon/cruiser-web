@@ -17,7 +17,7 @@ export default function Home() {
   const [meets, setMeets] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [mode, setMode] = useState(null); // null | "find" | "host"
+  const [mode, setMode] = useState("find"); // default to find
 
   // search + filters
   const [location, setLocation] = useState("");
