@@ -186,7 +186,11 @@ function HomeInner() {
     setHostError("");
     try {
       let photoUrl = "";
-      // Upload photo if a file was selected
+      // Require a photo
+      if (!hostPhotoFile) {
+        throw new Error("A photo or flyer is required. Please upload an image for your meet.");
+      }
+      // Upload photo
       if (hostPhotoFile) {
         setHostPhotoUploading(true);
 
@@ -454,7 +458,7 @@ function HomeInner() {
                       </div>
                     </div>
                     <div style={{ marginBottom: 12 }}>
-                      <label style={lbl}>Photo / Flyer <span style={{ color: "#bbb" }}>(optional)</span></label>
+                      <label style={lbl}>Photo / Flyer <span style={{ color: "#DC2626" }}>*</span></label>
                       <label style={{
                         display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
                         border: `2px dashed ${hostPhotoPreview ? "#1a1a1a" : "#E8E8E4"}`, borderRadius: 8,
