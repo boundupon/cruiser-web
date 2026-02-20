@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
@@ -15,7 +15,7 @@ function formatDatePretty(iso) {
   }
 }
 
-export default function Home() {
+function HomeInner() {
   const searchParams = useSearchParams();
   const [meets, setMeets] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -558,3 +558,10 @@ export default function Home() {
   );
 }
 
+export default function Home() {
+  return (
+    <Suspense fallback={null}>
+      <HomeInner />
+    </Suspense>
+  );
+}
