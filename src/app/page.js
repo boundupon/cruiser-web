@@ -189,11 +189,31 @@ function HomeInner() {
       // Upload photo if a file was selected
       if (hostPhotoFile) {
         setHostPhotoUploading(true);
+
+        // Validate file type and size before uploading
+        const allowedTypes = ["image/jpeg", "image/png", "image/webp", "image/gif"];
+        if (!allowedTypes.includes(hostPhotoFile.type)) {
+          throw new Error("Photo upload failed: Only JPEG, PNG, WEBP, and GIF images are allowed.");
+        }
+        if (hostPhotoFile.size > 5 * 1024 * 1024) {
+          throw new Error("Photo upload failed: Image must be under 5MB.");
+        }
+
         const ext = hostPhotoFile.name.split(".").pop();
         const fileName = `${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+
+        // Get current session to ensure auth token is fresh
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session) {
+          throw new Error("Photo upload failed: You must be signed in to upload a photo.");
+        }
+
         const { error: uploadError } = await supabase.storage
           .from("meet-photos")
-          .upload(fileName, hostPhotoFile, { contentType: hostPhotoFile.type });
+          .upload(fileName, hostPhotoFile, {
+            contentType: hostPhotoFile.type,
+            upsert: false,
+          });
         if (uploadError) throw new Error("Photo upload failed: " + uploadError.message);
         const { data: urlData } = supabase.storage.from("meet-photos").getPublicUrl(fileName);
         photoUrl = urlData.publicUrl;
@@ -215,7 +235,10 @@ function HomeInner() {
           photo_url: photoUrl,
         }),
       });
-      if (!res.ok) throw new Error("Submission failed");
+      if (!res.ok) {
+        const errBody = await res.json().catch(() => ({}));
+        throw new Error("Submission failed: " + (errBody?.error || res.status));
+      }
       setHostSuccess(true);
       setHostTitle(""); setHostCity(""); setHostLocation("");
       setHostName(""); setHostContact(""); setHostDate("");
@@ -223,9 +246,12 @@ function HomeInner() {
       setHostPhotoFile(null); setHostPhotoPreview("");
       setHostEventType("Cars & Coffee");
     } catch (err) {
-      setHostError("Something went wrong. Please try again.");
+      // Surface the real error message so it's visible in the UI
+      setHostError(err?.message || "Something went wrong. Please try again.");
+      console.error("[Cruiser] Host submit error:", err);
     } finally {
       setHostSubmitting(false);
+      setHostPhotoUploading(false);
     }
   }
 
