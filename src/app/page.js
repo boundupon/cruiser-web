@@ -2,6 +2,8 @@
 
 import { useEffect, useMemo, useState, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
+import { supabase } from "./supabaseClient";
+import AuthModal from "./AuthModal";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
 const ADMIN_SECRET = process.env.NEXT_PUBLIC_ADMIN_SECRET || "";
@@ -17,6 +19,8 @@ function formatDatePretty(iso) {
 
 function HomeInner() {
   const searchParams = useSearchParams();
+  const [user, setUser] = useState(null);
+  const [showAuth, setShowAuth] = useState(false);
   const [meets, setMeets] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -53,6 +57,18 @@ function HomeInner() {
   const [adminPassword, setAdminPassword] = useState("");
   const [adminAuthed, setAdminAuthed] = useState(false);
   const [adminActionMsg, setAdminActionMsg] = useState("");
+
+  useEffect(() => {
+    // Get initial session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setUser(session?.user ?? null);
+    });
+    // Listen for auth changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null);
+    });
+    return () => subscription.unsubscribe();
+  }, []);
 
   useEffect(() => {
     async function load() {
@@ -198,6 +214,7 @@ function HomeInner() {
 
   return (
     <div style={{ minHeight: "100vh", background: "#FAFAF9", color: "#1a1a1a", fontFamily: "'DM Sans', -apple-system, sans-serif" }}>
+      {showAuth && <AuthModal onClose={() => setShowAuth(false)} onAuth={(u) => setUser(u)} />}
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&display=swap');
         * { box-sizing: border-box; }
@@ -222,9 +239,27 @@ function HomeInner() {
               <a key={l} className="nav-link" href="#" style={{ fontSize: 14, color: "#888", textDecoration: "none", transition: "color 0.15s" }}>{l}</a>
             ))}
           </nav>
-          <div style={{ display: "flex", gap: 8 }}>
-            <button style={{ background: "none", border: "1.5px solid #E0E0DC", borderRadius: 8, padding: "8px 16px", fontSize: 14, color: "#555", cursor: "pointer" }}>Sign in</button>
-            <button style={{ background: "#1a1a1a", border: "none", borderRadius: 8, padding: "8px 16px", fontSize: 14, color: "white", fontWeight: 500, cursor: "pointer" }}>Sign up</button>
+          <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+            {user ? (
+              <>
+                <span style={{ fontSize: 13, color: "#888" }}>{user.email?.split("@")[0]}</span>
+                <button onClick={() => supabase.auth.signOut()}
+                  style={{ background: "none", border: "1.5px solid #E0E0DC", borderRadius: 8, padding: "8px 16px", fontSize: 14, color: "#555", cursor: "pointer" }}>
+                  Sign out
+                </button>
+              </>
+            ) : (
+              <>
+                <button onClick={() => setShowAuth(true)}
+                  style={{ background: "none", border: "1.5px solid #E0E0DC", borderRadius: 8, padding: "8px 16px", fontSize: 14, color: "#555", cursor: "pointer" }}>
+                  Sign in
+                </button>
+                <button onClick={() => setShowAuth(true)}
+                  style={{ background: "#1a1a1a", border: "none", borderRadius: 8, padding: "8px 16px", fontSize: 14, color: "white", fontWeight: 500, cursor: "pointer" }}>
+                  Sign up
+                </button>
+              </>
+            )}
           </div>
         </div>
       </header>
@@ -308,7 +343,17 @@ function HomeInner() {
               </form>
             ) : (
               <div>
-                {hostSuccess ? (
+                {!user ? (
+                  <div style={{ textAlign: "center", padding: "32px 0" }}>
+                    <div style={{ fontSize: 32, marginBottom: 12 }}>🔒</div>
+                    <div style={{ fontSize: 16, fontWeight: 600, marginBottom: 8 }}>Sign in to host a meet</div>
+                    <div style={{ fontSize: 14, color: "#888", marginBottom: 24 }}>Create an account to submit your meet for review.</div>
+                    <button onClick={() => setShowAuth(true)}
+                      style={{ background: "#1a1a1a", color: "white", border: "none", borderRadius: 8, padding: "10px 24px", fontSize: 14, cursor: "pointer" }}>
+                      Sign in / Sign up
+                    </button>
+                  </div>
+                ) : hostSuccess ? (
                   <div style={{ textAlign: "center", padding: "32px 0" }}>
                     <div style={{ fontSize: 32, marginBottom: 12 }}>&#127881;</div>
                     <div style={{ fontSize: 16, fontWeight: 600, marginBottom: 8 }}>Meet submitted for review!</div>
