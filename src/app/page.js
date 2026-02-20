@@ -44,6 +44,10 @@ function HomeInner() {
   const [hostTime, setHostTime] = useState("");
   const [hostEventType, setHostEventType] = useState("Cars & Coffee");
   const [hostDescription, setHostDescription] = useState("");
+  const [hostPhoto, setHostPhoto] = useState("");
+  const [hostPhotoFile, setHostPhotoFile] = useState(null);
+  const [hostPhotoPreview, setHostPhotoPreview] = useState("");
+  const [hostPhotoUploading, setHostPhotoUploading] = useState(false);
   const [hostSubmitting, setHostSubmitting] = useState(false);
   const [hostSuccess, setHostSuccess] = useState(false);
   const [hostError, setHostError] = useState("");
@@ -181,6 +185,20 @@ function HomeInner() {
     setHostSubmitting(true);
     setHostError("");
     try {
+      let photoUrl = "";
+      // Upload photo if a file was selected
+      if (hostPhotoFile) {
+        setHostPhotoUploading(true);
+        const ext = hostPhotoFile.name.split(".").pop();
+        const fileName = `${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+        const { error: uploadError } = await supabase.storage
+          .from("meet-photos")
+          .upload(fileName, hostPhotoFile, { contentType: hostPhotoFile.type });
+        if (uploadError) throw new Error("Photo upload failed: " + uploadError.message);
+        const { data: urlData } = supabase.storage.from("meet-photos").getPublicUrl(fileName);
+        photoUrl = urlData.publicUrl;
+        setHostPhotoUploading(false);
+      }
       const res = await fetch(`${API_BASE}/meets`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -194,13 +212,15 @@ function HomeInner() {
           time: hostTime,
           event_type: hostEventType,
           description: hostDescription,
+          photo_url: photoUrl,
         }),
       });
       if (!res.ok) throw new Error("Submission failed");
       setHostSuccess(true);
       setHostTitle(""); setHostCity(""); setHostLocation("");
       setHostName(""); setHostContact(""); setHostDate("");
-      setHostTime(""); setHostDescription("");
+      setHostTime(""); setHostDescription(""); setHostPhoto("");
+      setHostPhotoFile(null); setHostPhotoPreview("");
       setHostEventType("Cars & Coffee");
     } catch (err) {
       setHostError("Something went wrong. Please try again.");
@@ -407,6 +427,44 @@ function HomeInner() {
                         </select>
                       </div>
                     </div>
+                    <div style={{ marginBottom: 12 }}>
+                      <label style={lbl}>Photo / Flyer <span style={{ color: "#bbb" }}>(optional)</span></label>
+                      <label style={{
+                        display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
+                        border: `2px dashed ${hostPhotoPreview ? "#1a1a1a" : "#E8E8E4"}`, borderRadius: 8,
+                        padding: hostPhotoPreview ? 0 : "24px 16px", cursor: "pointer",
+                        background: "#FAFAF9", overflow: "hidden", minHeight: hostPhotoPreview ? 160 : "auto",
+                        position: "relative",
+                      }}>
+                        <input type="file" accept="image/*" style={{ display: "none" }}
+                          onChange={(e) => {
+                            const file = e.target.files[0];
+                            if (!file) return;
+                            setHostPhotoFile(file);
+                            setHostPhotoPreview(URL.createObjectURL(file));
+                          }} />
+                        {hostPhotoPreview ? (
+                          <>
+                            <img src={hostPhotoPreview} alt="preview"
+                              style={{ width: "100%", height: 160, objectFit: "cover", display: "block" }} />
+                            <div style={{
+                              position: "absolute", bottom: 8, right: 8, background: "rgba(0,0,0,0.6)",
+                              color: "white", fontSize: 11, padding: "4px 10px", borderRadius: 6,
+                            }}>
+                              Click to change
+                            </div>
+                          </>
+                        ) : (
+                          <>
+                            <div style={{ fontSize: 24, marginBottom: 8 }}>📷</div>
+                            <div style={{ fontSize: 13, color: "#888", textAlign: "center" }}>
+                              Click to upload a photo or flyer
+                            </div>
+                            <div style={{ fontSize: 11, color: "#bbb", marginTop: 4 }}>JPG, PNG, WebP up to 5MB</div>
+                          </>
+                        )}
+                      </label>
+                    </div>
                     <div style={{ marginBottom: 16 }}>
                       <label style={lbl}>Description</label>
                       <textarea value={hostDescription} onChange={(e) => setHostDescription(e.target.value)}
@@ -420,7 +478,7 @@ function HomeInner() {
                     )}
                     <button type="submit" disabled={hostSubmitting}
                       style={{ background: "#1a1a1a", color: "white", border: "none", borderRadius: 8, padding: "12px 28px", fontSize: 14, fontWeight: 500, cursor: hostSubmitting ? "not-allowed" : "pointer", opacity: hostSubmitting ? 0.7 : 1 }}>
-                      {hostSubmitting ? "Submitting..." : "Submit for Review"}
+                      {hostSubmitting ? (hostPhotoUploading ? "Uploading photo..." : "Submitting...") : "Submit for Review"}
                     </button>
                   </form>
                 )}
@@ -467,10 +525,25 @@ function HomeInner() {
                 No meets found. Try a different city or expand your radius.
               </div>
             )}
-            {!loading && !error && paged.map((m) => (
+            {!loading && !error && paged.map((m) => {
+              const gradients = {
+                "Cars & Coffee": "linear-gradient(135deg, #2c1810 0%, #6b3a2a 50%, #c4763a 100%)",
+                "Cruise":        "linear-gradient(135deg, #0f2027 0%, #203a43 50%, #2c5364 100%)",
+                "Night Meet":    "linear-gradient(135deg, #0d0d0d 0%, #1a1a2e 50%, #16213e 100%)",
+                "Show":          "linear-gradient(135deg, #1a1a1a 0%, #3d2b1f 50%, #7c4a2d 100%)",
+                "Track Day":     "linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 50%, #555 100%)",
+              };
+              const fallback = gradients[m.event_type] || "linear-gradient(135deg, #1a1a1a, #444)";
+              return (
               <article key={m.id} className="meet-card"
                 style={{ background: "white", border: "1.5px solid #E8E8E4", borderRadius: 12, overflow: "hidden", cursor: "pointer" }}>
-                <div style={{ height: 4, background: "#1a1a1a" }} />
+                {/* Banner */}
+                <div style={{
+                  height: 160,
+                  backgroundImage: m.photo_url ? `url(${m.photo_url})` : fallback,
+                  backgroundSize: "cover",
+                  backgroundPosition: "center",
+                }} />
                 <div style={{ padding: 20 }}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 10 }}>
                     <span style={{ fontSize: 11, background: "#F5F5F3", color: "#777", padding: "4px 10px", borderRadius: 100 }}>
@@ -489,7 +562,8 @@ function HomeInner() {
                   </div>
                 </div>
               </article>
-            ))}
+              );
+            })}
           </div>
 
           {!loading && !error && filtered.length > PAGE_SIZE && (
