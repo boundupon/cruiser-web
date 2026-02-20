@@ -648,7 +648,7 @@ function HomeInner() {
                   <p style={{ fontSize: 13, color: "#888", margin: "0 0 16px" }}>&#128205; {m.city || "Location TBD"}</p>
                   <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", borderTop: "1px solid #F0EFEB", paddingTop: 14 }}>
                     <span style={{ fontSize: 13, color: "#888" }}>by {m.host_name || "Anonymous"}</span>
-                    <a href={`${API_BASE}/meets/${m.id}`} target="_blank" rel="noreferrer"
+                    <a href={`/meets/${m.id}`}
                       style={{ fontSize: 13, fontWeight: 600, color: "#1a1a1a", textDecoration: "none" }}>
                       Details
                     </a>
