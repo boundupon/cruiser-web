@@ -380,7 +380,7 @@ export default function Home() {
                     )}
                     <button type="submit" disabled={hostSubmitting}
                       style={{ background: "#1a1a1a", color: "white", border: "none", borderRadius: 8, padding: "12px 28px", fontSize: 14, fontWeight: 500, cursor: hostSubmitting ? "not-allowed" : "pointer", opacity: hostSubmitting ? 0.7 : 1 }}>
-                      {hostSubmitting ? "Submitting..." : "Submit for Review →"}
+                      {hostSubmitting ? "Submitting..." : "Submit for Review"}
                     </button>
                   </form>
                 )}
