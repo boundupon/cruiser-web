@@ -66,6 +66,7 @@ function HomeInner() {
 
   const [hostTitle, setHostTitle] = useState("");
   const [hostCity, setHostCity] = useState("");
+  const [hostState, setHostState] = useState("");
   const [hostLocation, setHostLocation] = useState("");
   const [hostName, setHostName] = useState("");
   const [hostContact, setHostContact] = useState("");
@@ -139,21 +140,21 @@ function HomeInner() {
     let list = [...meets];
     if (location.trim()) {
       if (searchCoords) {
-        // Radius-based filtering using real distance
+        // Radius-based filtering using stored lat/lng on each meet
         const radiusMiles = parseInt(radius) || 25;
         list = list.filter((m) => {
-          const mc = meetCoords[m.id];
-          if (!mc) {
-            // Fall back to city text match if coords not loaded yet
-            return (m.city || "").toLowerCase().includes(location.trim().toLowerCase());
+          if (m.lat && m.lng) {
+            // Use stored coordinates — fast, no API call needed
+            return haversineDistance(searchCoords.lat, searchCoords.lon, m.lat, m.lng) <= radiusMiles;
           }
-          return haversineDistance(searchCoords.lat, searchCoords.lon, mc.lat, mc.lon) <= radiusMiles;
+          // Fallback to city text match for meets without coordinates
+          return (m.city || "").toLowerCase().includes(location.trim().toLowerCase());
         });
       } else {
-        // Fallback text match while geocoding or if geocode failed
-        const needle = [location.trim(), locationState.trim()].filter(Boolean).join(" ").toLowerCase();
+        // No geocode result yet — fallback to text match
+        const needle = location.trim().toLowerCase();
         list = list.filter((m) =>
-          `${m.city || ""} ${m.title || ""}`.toLowerCase().includes(location.trim().toLowerCase())
+          `${m.city || ""} ${m.state || ""} ${m.title || ""}`.toLowerCase().includes(needle)
         );
       }
     }
@@ -163,7 +164,7 @@ function HomeInner() {
     if (dateFrom) list = list.filter((m) => (m.date || "") >= dateFrom);
     if (dateTo) list = list.filter((m) => (m.date || "") <= dateTo);
     return list;
-  }, [meets, location, locationState, searchCoords, meetCoords, radius, eventType, dateFrom, dateTo]);
+  }, [meets, location, locationState, searchCoords, radius, eventType, dateFrom, dateTo]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const pageSafe = Math.min(Math.max(1, page), totalPages);
@@ -181,7 +182,6 @@ function HomeInner() {
     const query = [location.trim(), locationState.trim()].filter(Boolean).join(", ");
     if (query) {
       setGeoLoading(true);
-      // Geocode and capture the display name
       try {
         const res = await fetch(
           `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&limit=1&countrycodes=us`,
@@ -189,9 +189,7 @@ function HomeInner() {
         );
         const data = await res.json();
         if (data && data[0]) {
-          const coords = { lat: parseFloat(data[0].lat), lon: parseFloat(data[0].lon) };
-          setSearchCoords(coords);
-          // Build a clean display name e.g. "Norfolk, Virginia"
+          setSearchCoords({ lat: parseFloat(data[0].lat), lon: parseFloat(data[0].lon) });
           const parts = (data[0].display_name || "").split(",");
           setDetectedLocation(parts.slice(0, 2).join(",").trim());
         } else {
@@ -201,23 +199,9 @@ function HomeInner() {
       } catch (e) {
         console.error("Geocode error:", e);
         setSearchCoords(null);
+      } finally {
+        setGeoLoading(false);
       }
-      // Geocode all meets that don't have coords yet
-      if (coords) {
-        const missing = meets.filter(m => m.city && !meetCoords[m.id]);
-        const results = await Promise.all(
-          missing.map(async (m) => {
-            const c = await geocodeCity(m.city);
-            return { id: m.id, coords: c };
-          })
-        );
-        setMeetCoords(prev => {
-          const next = { ...prev };
-          results.forEach(({ id, coords }) => { if (coords) next[id] = coords; });
-          return next;
-        });
-      }
-      setGeoLoading(false);
     } else {
       setSearchCoords(null);
     }
@@ -311,6 +295,23 @@ function HomeInner() {
           throw new Error("Photo upload failed: You must be signed in to upload a photo.");
         }
 
+      // Geocode city + state to get lat/lng for radius search
+      let meetLat = null, meetLng = null;
+      try {
+        const geoQuery = [hostCity.trim(), hostState.trim()].filter(Boolean).join(", ");
+        const geoRes = await fetch(
+          `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(geoQuery)}&format=json&limit=1&countrycodes=us`,
+          { headers: { "Accept-Language": "en" } }
+        );
+        const geoData = await geoRes.json();
+        if (geoData && geoData[0]) {
+          meetLat = parseFloat(geoData[0].lat);
+          meetLng = parseFloat(geoData[0].lon);
+        }
+      } catch (e) {
+        console.warn("Geocoding failed, meet will still be submitted:", e);
+      }
+
         const { error: uploadError } = await supabase.storage
           .from("meet-photos")
           .upload(fileName, hostPhotoFile, {
@@ -328,6 +329,7 @@ function HomeInner() {
         body: JSON.stringify({
           title: hostTitle,
           city: hostCity,
+          state: hostState,
           location: hostLocation,
           host_name: hostName,
           host_contact: hostContact,
@@ -336,6 +338,8 @@ function HomeInner() {
           event_type: hostEventType,
           description: hostDescription,
           photo_url: photoUrl,
+          lat: meetLat,
+          lng: meetLng,
         }),
       });
       if (!res.ok) {
@@ -343,7 +347,7 @@ function HomeInner() {
         throw new Error("Submission failed: " + (errBody?.error || res.status));
       }
       setHostSuccess(true);
-      setHostTitle(""); setHostCity(""); setHostLocation("");
+      setHostTitle(""); setHostCity(""); setHostState(""); setHostLocation("");
       setHostName(""); setHostContact(""); setHostDate("");
       setHostTime(""); setHostDescription(""); setHostPhoto("");
       setHostPhotoFile(null); setHostPhotoPreview("");
@@ -594,7 +598,12 @@ function HomeInner() {
                         <input required value={hostCity} onChange={(e) => setHostCity(e.target.value)}
                           placeholder="e.g. Norfolk" style={inp} />
                       </div>
-                      <div style={{ gridColumn: isMobile ? "1" : "2 / -1" }}>
+                      <div>
+                        <label style={lbl}>State *</label>
+                        <input required value={hostState} onChange={(e) => setHostState(e.target.value)}
+                          placeholder="e.g. VA" style={inp} />
+                      </div>
+                      <div style={{ gridColumn: isMobile ? "1" : "3 / -1" }}>
                         <label style={lbl}>Location / venue</label>
                         <input value={hostLocation} onChange={(e) => setHostLocation(e.target.value)}
                           placeholder="e.g. Waterside District" style={inp} />
