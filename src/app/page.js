@@ -108,16 +108,35 @@ function HomeInner() {
     // Get initial session
     supabase.auth.getSession().then(({ data: { session } }) => {
       setUser(session?.user ?? null);
-      if (session?.user) fetchProfileUsername(session.access_token);
+      if (session?.user) {
+        fetchProfileUsername(session.access_token);
+        checkAndRedirectToSetup(session.access_token);
+      }
     });
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setUser(session?.user ?? null);
-      if (session?.user) fetchProfileUsername(session.access_token);
-      else setProfileUsername(null);
+      if (session?.user) {
+        fetchProfileUsername(session.access_token);
+        checkAndRedirectToSetup(session.access_token);
+      } else setProfileUsername(null);
     });
     return () => subscription.unsubscribe();
   }, []);
+
+  async function checkAndRedirectToSetup(token) {
+    try {
+      const res = await fetch(`${API_BASE}/profile/me`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (res.ok) {
+        const p = await res.json();
+        if (!p?.username) window.location.href = "/profile/setup";
+      } else {
+        window.location.href = "/profile/setup";
+      }
+    } catch { /* silent */ }
+  }
 
   async function fetchProfileUsername(token) {
     try {
