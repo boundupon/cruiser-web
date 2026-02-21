@@ -411,6 +411,10 @@ function HomeInner() {
             {user ? (
               <>
                 <span style={{ fontSize: 13, color: "#888" }}>{user.email?.split("@")[0]}</span>
+                <a href="/my-submissions"
+                  style={{ background: "none", border: "1.5px solid #E0E0DC", borderRadius: 8, padding: "8px 16px", fontSize: 14, color: "#555", cursor: "pointer", textDecoration: "none" }}>
+                  My Submissions
+                </a>
                 <button onClick={() => supabase.auth.signOut()}
                   style={{ background: "none", border: "1.5px solid #E0E0DC", borderRadius: 8, padding: "8px 16px", fontSize: 14, color: "#555", cursor: "pointer" }}>
                   Sign out
@@ -459,6 +463,7 @@ function HomeInner() {
             {user ? (
               <>
                 <span style={{ fontSize: 13, color: "#888", padding: "14px 0", borderBottom: "1px solid #F0EFEB" }}>{user.email?.split("@")[0]}</span>
+                <a href="/my-submissions" onClick={() => setMenuOpen(false)}>My Submissions</a>
                 <button onClick={() => { supabase.auth.signOut(); setMenuOpen(false); }}>Sign out</button>
               </>
             ) : (
