@@ -435,7 +435,7 @@ function HomeInner() {
                     {profileUsername}
                   </a>
                 ) : (
-                  <a href="/u/setup"
+                  <a href="/profile/setup"
                     style={{ fontSize: 13, color: "#888", border: "1.5px solid #E0E0DC", borderRadius: 8, padding: "7px 14px", textDecoration: "none" }}>
                     Set up profile
                   </a>
@@ -490,7 +490,7 @@ function HomeInner() {
                 {profileUsername ? (
                   <a href={`/u/${profileUsername}`} onClick={() => setMenuOpen(false)}>👤 My Profile</a>
                 ) : (
-                  <a href="/u/setup" onClick={() => setMenuOpen(false)}>Set up profile</a>
+                  <a href="/profile/setup" onClick={() => setMenuOpen(false)}>Set up profile</a>
                 )}
                 <span style={{ fontSize: 13, color: "#888", padding: "14px 0", borderBottom: "1px solid #F0EFEB" }}>{user.email?.split("@")[0]}</span>
                 <button onClick={() => { supabase.auth.signOut(); setMenuOpen(false); }}>Sign out</button>

@@ -1,9 +1,13 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { supabase } from "./supabaseClient";
 
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
+
 export default function AuthModal({ onClose, onAuth, initialTab = "signin" }) {
+  const router = useRouter();
   const [tab, setTab] = useState(initialTab);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -15,8 +19,37 @@ export default function AuthModal({ onClose, onAuth, initialTab = "signin" }) {
     width: "100%", border: "1.5px solid #E8E8E4", borderRadius: 8,
     padding: "11px 14px", fontSize: 14, outline: "none",
     color: "#1a1a1a", background: "#FAFAF9", marginBottom: 12,
+    fontFamily: "inherit",
   };
   const lbl = { fontSize: 12, color: "#999", display: "block", marginBottom: 6 };
+
+  // After any successful auth, check if profile exists — redirect to setup if not
+  async function handlePostAuth(user, accessToken) {
+    try {
+      const res = await fetch(`${API_BASE}/profile/me`, {
+        headers: { Authorization: `Bearer ${accessToken}` },
+      });
+      if (res.ok) {
+        const p = await res.json();
+        if (p?.username) {
+          // Has profile — continue normally
+          onAuth(user);
+          onClose();
+        } else {
+          // No profile — redirect to setup
+          onClose();
+          router.push("/profile/setup");
+        }
+      } else {
+        // Error fetching — send to setup to be safe
+        onClose();
+        router.push("/profile/setup");
+      }
+    } catch {
+      onClose();
+      router.push("/profile/setup");
+    }
+  }
 
   async function handleEmailAuth(e) {
     e.preventDefault();
@@ -25,14 +58,21 @@ export default function AuthModal({ onClose, onAuth, initialTab = "signin" }) {
     setSuccess("");
     try {
       if (tab === "signup") {
-        const { error } = await supabase.auth.signUp({ email, password });
+        const { data, error } = await supabase.auth.signUp({ email, password });
         if (error) throw error;
-        setSuccess("Check your email to confirm your account!");
+        if (data?.user && !data.user.identities?.length === 0) {
+          // Email confirmation required — show message
+          setSuccess("Check your email to confirm your account, then sign in!");
+        } else if (data?.session) {
+          // Auto-confirmed (e.g. email confirmations disabled in Supabase)
+          await handlePostAuth(data.user, data.session.access_token);
+        } else {
+          setSuccess("Check your email to confirm your account, then sign in!");
+        }
       } else {
         const { data, error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
-        onAuth(data.user);
-        onClose();
+        await handlePostAuth(data.user, data.session.access_token);
       }
     } catch (err) {
       setError(err.message);
@@ -43,9 +83,12 @@ export default function AuthModal({ onClose, onAuth, initialTab = "signin" }) {
 
   async function handleGoogle() {
     setError("");
+    // For Google OAuth, the redirect handles post-auth — we use the callback URL
     const { error } = await supabase.auth.signInWithOAuth({
       provider: "google",
-      options: { redirectTo: window.location.origin },
+      options: {
+        redirectTo: `${window.location.origin}/auth/callback`,
+      },
     });
     if (error) setError(error.message);
   }
@@ -65,6 +108,7 @@ export default function AuthModal({ onClose, onAuth, initialTab = "signin" }) {
           background: "white", borderRadius: 16, padding: 32,
           width: "100%", maxWidth: 400,
           boxShadow: "0 8px 48px rgba(0,0,0,0.15)",
+          fontFamily: "'DM Sans', -apple-system, sans-serif",
         }}
       >
         {/* Header */}
@@ -83,6 +127,7 @@ export default function AuthModal({ onClose, onAuth, initialTab = "signin" }) {
                   fontSize: 13, fontWeight: 500, cursor: "pointer",
                   color: tab === t ? "#1a1a1a" : "#888",
                   boxShadow: tab === t ? "0 1px 4px rgba(0,0,0,0.08)" : "none",
+                  fontFamily: "inherit",
                 }}>
                 {t === "signin" ? "Sign in" : "Sign up"}
               </button>
@@ -97,6 +142,7 @@ export default function AuthModal({ onClose, onAuth, initialTab = "signin" }) {
             padding: "11px 14px", fontSize: 14, background: "white",
             cursor: "pointer", display: "flex", alignItems: "center",
             justifyContent: "center", gap: 10, marginBottom: 16, fontWeight: 500,
+            fontFamily: "inherit",
           }}>
           <svg width="18" height="18" viewBox="0 0 48 48">
             <path fill="#4285F4" d="M47.5 24.6c0-1.6-.1-3.1-.4-4.6H24v8.7h13.2c-.6 3-2.3 5.6-4.9 7.3v6h7.9c4.6-4.3 7.3-10.6 7.3-17.4z"/>
@@ -138,6 +184,7 @@ export default function AuthModal({ onClose, onAuth, initialTab = "signin" }) {
               width: "100%", background: "#1a1a1a", color: "white", border: "none",
               borderRadius: 8, padding: "12px", fontSize: 14, fontWeight: 500,
               cursor: loading ? "not-allowed" : "pointer", opacity: loading ? 0.7 : 1,
+              fontFamily: "inherit",
             }}>
             {loading ? "..." : tab === "signin" ? "Sign in" : "Create account"}
           </button>
