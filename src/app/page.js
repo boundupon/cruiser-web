@@ -138,20 +138,20 @@ function HomeInner() {
 
   const filtered = useMemo(() => {
     let list = [...meets];
-    // Only apply location/radius filtering after the user has hit Search
-    if (searched && location.trim()) {
+    if (location.trim()) {
       if (searchCoords) {
         // Radius-based filtering using stored lat/lng on each meet
         const radiusMiles = parseInt(radius) || 25;
         list = list.filter((m) => {
           if (m.lat && m.lng) {
+            // Use stored coordinates — fast, no API call needed
             return haversineDistance(searchCoords.lat, searchCoords.lon, m.lat, m.lng) <= radiusMiles;
           }
           // Fallback to city text match for meets without coordinates
           return (m.city || "").toLowerCase().includes(location.trim().toLowerCase());
         });
       } else {
-        // Geocode failed — fallback to text match only after Search was hit
+        // No geocode result yet — fallback to text match
         const needle = location.trim().toLowerCase();
         list = list.filter((m) =>
           `${m.city || ""} ${m.state || ""} ${m.title || ""}`.toLowerCase().includes(needle)
@@ -269,6 +269,7 @@ function HomeInner() {
     setHostError("");
     try {
       let photoUrl = "";
+      let meetLat = null, meetLng = null;
       // Require a photo
       if (!hostPhotoFile) {
         throw new Error("A photo or flyer is required. Please upload an image for your meet.");
@@ -296,7 +297,6 @@ function HomeInner() {
         }
 
       // Geocode city + state to get lat/lng for radius search
-      let meetLat = null, meetLng = null;
       try {
         const geoQuery = [hostCity.trim(), hostState.trim()].filter(Boolean).join(", ");
         const geoRes = await fetch(
