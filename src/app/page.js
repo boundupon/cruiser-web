@@ -61,6 +61,14 @@ function HomeInner() {
   const [dateTo, setDateTo] = useState("");
   const [searched, setSearched] = useState(false);
   const [searchCoords, setSearchCoords] = useState(null); // {lat, lon} of searched location
+
+  // "Committed" filter values — only applied when user hits Search Meets
+  const [committedLocation, setCommittedLocation] = useState("");
+  const [committedLocationState, setCommittedLocationState] = useState("");
+  const [committedRadius, setCommittedRadius] = useState("25 mi");
+  const [committedEventType, setCommittedEventType] = useState("All Types");
+  const [committedDateFrom, setCommittedDateFrom] = useState("");
+  const [committedDateTo, setCommittedDateTo] = useState("");
   const [meetCoords, setMeetCoords] = useState({}); // {meetId: {lat, lon}}
   const [geoLoading, setGeoLoading] = useState(false);
 
@@ -78,9 +86,6 @@ function HomeInner() {
   const [hostPhotoFile, setHostPhotoFile] = useState(null);
   const [hostPhotoPreview, setHostPhotoPreview] = useState("");
   const [hostPhotoUploading, setHostPhotoUploading] = useState(false);
-  const [hostIsFree, setHostIsFree] = useState(true);
-  const [hostTicketLink, setHostTicketLink] = useState("");
-  const [hostParkingInfo, setHostParkingInfo] = useState("");
   const [hostSubmitting, setHostSubmitting] = useState(false);
   const [hostSuccess, setHostSuccess] = useState(false);
   const [hostError, setHostError] = useState("");
@@ -141,33 +146,29 @@ function HomeInner() {
 
   const filtered = useMemo(() => {
     let list = [...meets];
-    if (location.trim()) {
+    if (committedLocation.trim()) {
       if (searchCoords) {
-        // Radius-based filtering using stored lat/lng on each meet
-        const radiusMiles = parseInt(radius) || 25;
+        const radiusMiles = parseInt(committedRadius) || 25;
         list = list.filter((m) => {
           if (m.lat && m.lng) {
-            // Use stored coordinates — fast, no API call needed
             return haversineDistance(searchCoords.lat, searchCoords.lon, m.lat, m.lng) <= radiusMiles;
           }
-          // Fallback to city text match for meets without coordinates
-          return (m.city || "").toLowerCase().includes(location.trim().toLowerCase());
+          return (m.city || "").toLowerCase().includes(committedLocation.trim().toLowerCase());
         });
       } else {
-        // No geocode result yet — fallback to text match
-        const needle = location.trim().toLowerCase();
+        const needle = committedLocation.trim().toLowerCase();
         list = list.filter((m) =>
           `${m.city || ""} ${m.state || ""} ${m.title || ""}`.toLowerCase().includes(needle)
         );
       }
     }
-    if (eventType !== "All Types") {
-      list = list.filter((m) => (m.event_type || "").toLowerCase() === eventType.toLowerCase());
+    if (committedEventType !== "All Types") {
+      list = list.filter((m) => (m.event_type || "").toLowerCase() === committedEventType.toLowerCase());
     }
-    if (dateFrom) list = list.filter((m) => (m.date || "") >= dateFrom);
-    if (dateTo) list = list.filter((m) => (m.date || "") <= dateTo);
+    if (committedDateFrom) list = list.filter((m) => (m.date || "") >= committedDateFrom);
+    if (committedDateTo) list = list.filter((m) => (m.date || "") <= committedDateTo);
     return list;
-  }, [meets, location, locationState, searched, searchCoords, radius, eventType, dateFrom, dateTo]);
+  }, [meets, committedLocation, committedLocationState, searchCoords, committedRadius, committedEventType, committedDateFrom, committedDateTo]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const pageSafe = Math.min(Math.max(1, page), totalPages);
@@ -176,12 +177,19 @@ function HomeInner() {
     return filtered.slice(start, start + PAGE_SIZE);
   }, [filtered, pageSafe]);
 
-  useEffect(() => { setPage(1); }, [searched, eventType, dateFrom, dateTo]);
+  useEffect(() => { setPage(1); }, [committedLocation, committedEventType, committedDateFrom, committedDateTo]);
 
   async function handleSearch(e) {
     e.preventDefault();
     setMode("find");
     setSearched(true);
+    // Commit all current filter values at search time
+    setCommittedLocation(location);
+    setCommittedLocationState(locationState);
+    setCommittedRadius(radius);
+    setCommittedEventType(eventType);
+    setCommittedDateFrom(dateFrom);
+    setCommittedDateTo(dateTo);
     const query = [location.trim(), locationState.trim()].filter(Boolean).join(", ");
     if (query) {
       setGeoLoading(true);
@@ -221,6 +229,13 @@ function HomeInner() {
     setSearched(false);
     setSearchCoords(null);
     setMode("find");
+    // Also clear committed values
+    setCommittedLocation("");
+    setCommittedLocationState("");
+    setCommittedRadius("25 mi");
+    setCommittedEventType("All Types");
+    setCommittedDateFrom("");
+    setCommittedDateTo("");
   }
 
   async function loadAdminMeets() {
@@ -272,7 +287,6 @@ function HomeInner() {
     setHostError("");
     try {
       let photoUrl = "";
-      let meetLat = null, meetLng = null;
       // Require a photo
       if (!hostPhotoFile) {
         throw new Error("A photo or flyer is required. Please upload an image for your meet.");
@@ -300,6 +314,7 @@ function HomeInner() {
         }
 
       // Geocode city + state to get lat/lng for radius search
+      let meetLat = null, meetLng = null;
       try {
         const geoQuery = [hostCity.trim(), hostState.trim()].filter(Boolean).join(", ");
         const geoRes = await fetch(
@@ -343,9 +358,6 @@ function HomeInner() {
           photo_url: photoUrl,
           lat: meetLat,
           lng: meetLng,
-          is_free: hostIsFree,
-          ticket_link: hostTicketLink,
-          parking_info: hostParkingInfo,
         }),
       });
       if (!res.ok) {
@@ -358,7 +370,6 @@ function HomeInner() {
       setHostTime(""); setHostDescription(""); setHostPhoto("");
       setHostPhotoFile(null); setHostPhotoPreview("");
       setHostEventType("Cars & Coffee");
-      setHostIsFree(true); setHostTicketLink(""); setHostParkingInfo("");
     } catch (err) {
       // Surface the real error message so it's visible in the UI
       setHostError(err?.message || "Something went wrong. Please try again.");
@@ -418,10 +429,6 @@ function HomeInner() {
             {user ? (
               <>
                 <span style={{ fontSize: 13, color: "#888" }}>{user.email?.split("@")[0]}</span>
-                <a href="/my-submissions"
-                  style={{ background: "none", border: "1.5px solid #E0E0DC", borderRadius: 8, padding: "8px 16px", fontSize: 14, color: "#555", cursor: "pointer", textDecoration: "none" }}>
-                  My Submissions
-                </a>
                 <button onClick={() => supabase.auth.signOut()}
                   style={{ background: "none", border: "1.5px solid #E0E0DC", borderRadius: 8, padding: "8px 16px", fontSize: 14, color: "#555", cursor: "pointer" }}>
                   Sign out
@@ -470,7 +477,6 @@ function HomeInner() {
             {user ? (
               <>
                 <span style={{ fontSize: 13, color: "#888", padding: "14px 0", borderBottom: "1px solid #F0EFEB" }}>{user.email?.split("@")[0]}</span>
-                <a href="/my-submissions" onClick={() => setMenuOpen(false)}>My Submissions</a>
                 <button onClick={() => { supabase.auth.signOut(); setMenuOpen(false); }}>Sign out</button>
               </>
             ) : (
@@ -644,28 +650,6 @@ function HomeInner() {
                           {EVENT_TYPES.slice(1).map((t) => <option key={t}>{t}</option>)}
                         </select>
                       </div>
-                    </div>
-                    {/* Admission + Parking */}
-                    <div style={{ marginBottom: 12 }}>
-                      <label style={lbl}>Admission</label>
-                      <div style={{ display: "flex", gap: 0, border: "1.5px solid #E8E8E4", borderRadius: 8, overflow: "hidden", marginBottom: 10 }}>
-                        <button type="button" onClick={() => { setHostIsFree(true); setHostTicketLink(""); }}
-                          style={{ flex: 1, padding: "9px 12px", fontSize: 13, fontWeight: 500, border: "none", cursor: "pointer", fontFamily: "inherit", background: hostIsFree ? "#1a1a1a" : "white", color: hostIsFree ? "white" : "#777", transition: "background .12s" }}>
-                          Free
-                        </button>
-                        <button type="button" onClick={() => setHostIsFree(false)}
-                          style={{ flex: 1, padding: "9px 12px", fontSize: 13, fontWeight: 500, border: "none", borderLeft: "1.5px solid #E8E8E4", cursor: "pointer", fontFamily: "inherit", background: !hostIsFree ? "#1a1a1a" : "white", color: !hostIsFree ? "white" : "#777", transition: "background .12s" }}>
-                          Paid / Registration
-                        </button>
-                      </div>
-                      {!hostIsFree && (
-                        <input value={hostTicketLink} onChange={(e) => setHostTicketLink(e.target.value)}
-                          placeholder="Ticket / registration link (https://...)"
-                          style={{ ...inp, marginBottom: 10 }} />
-                      )}
-                      <input value={hostParkingInfo} onChange={(e) => setHostParkingInfo(e.target.value)}
-                        placeholder="Parking info (optional) — e.g. Free lot on site, overflow on Deck B"
-                        style={inp} />
                     </div>
                     <div style={{ marginBottom: 12 }}>
                       <label style={lbl}>Photo / Flyer <span style={{ color: "#DC2626" }}>*</span></label>
