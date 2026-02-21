@@ -78,6 +78,9 @@ function HomeInner() {
   const [hostPhotoFile, setHostPhotoFile] = useState(null);
   const [hostPhotoPreview, setHostPhotoPreview] = useState("");
   const [hostPhotoUploading, setHostPhotoUploading] = useState(false);
+  const [hostIsFree, setHostIsFree] = useState(true);
+  const [hostTicketLink, setHostTicketLink] = useState("");
+  const [hostParkingInfo, setHostParkingInfo] = useState("");
   const [hostSubmitting, setHostSubmitting] = useState(false);
   const [hostSuccess, setHostSuccess] = useState(false);
   const [hostError, setHostError] = useState("");
@@ -340,6 +343,9 @@ function HomeInner() {
           photo_url: photoUrl,
           lat: meetLat,
           lng: meetLng,
+          is_free: hostIsFree,
+          ticket_link: hostTicketLink,
+          parking_info: hostParkingInfo,
         }),
       });
       if (!res.ok) {
@@ -352,6 +358,7 @@ function HomeInner() {
       setHostTime(""); setHostDescription(""); setHostPhoto("");
       setHostPhotoFile(null); setHostPhotoPreview("");
       setHostEventType("Cars & Coffee");
+      setHostIsFree(true); setHostTicketLink(""); setHostParkingInfo("");
     } catch (err) {
       // Surface the real error message so it's visible in the UI
       setHostError(err?.message || "Something went wrong. Please try again.");
@@ -637,6 +644,28 @@ function HomeInner() {
                           {EVENT_TYPES.slice(1).map((t) => <option key={t}>{t}</option>)}
                         </select>
                       </div>
+                    </div>
+                    {/* Admission + Parking */}
+                    <div style={{ marginBottom: 12 }}>
+                      <label style={lbl}>Admission</label>
+                      <div style={{ display: "flex", gap: 0, border: "1.5px solid #E8E8E4", borderRadius: 8, overflow: "hidden", marginBottom: 10 }}>
+                        <button type="button" onClick={() => { setHostIsFree(true); setHostTicketLink(""); }}
+                          style={{ flex: 1, padding: "9px 12px", fontSize: 13, fontWeight: 500, border: "none", cursor: "pointer", fontFamily: "inherit", background: hostIsFree ? "#1a1a1a" : "white", color: hostIsFree ? "white" : "#777", transition: "background .12s" }}>
+                          Free
+                        </button>
+                        <button type="button" onClick={() => setHostIsFree(false)}
+                          style={{ flex: 1, padding: "9px 12px", fontSize: 13, fontWeight: 500, border: "none", borderLeft: "1.5px solid #E8E8E4", cursor: "pointer", fontFamily: "inherit", background: !hostIsFree ? "#1a1a1a" : "white", color: !hostIsFree ? "white" : "#777", transition: "background .12s" }}>
+                          Paid / Registration
+                        </button>
+                      </div>
+                      {!hostIsFree && (
+                        <input value={hostTicketLink} onChange={(e) => setHostTicketLink(e.target.value)}
+                          placeholder="Ticket / registration link (https://...)"
+                          style={{ ...inp, marginBottom: 10 }} />
+                      )}
+                      <input value={hostParkingInfo} onChange={(e) => setHostParkingInfo(e.target.value)}
+                        placeholder="Parking info (optional) — e.g. Free lot on site, overflow on Deck B"
+                        style={inp} />
                     </div>
                     <div style={{ marginBottom: 12 }}>
                       <label style={lbl}>Photo / Flyer <span style={{ color: "#DC2626" }}>*</span></label>
