@@ -44,6 +44,7 @@ async function geocodeCity(city) {
 function HomeInner() {
   const searchParams = useSearchParams();
   const [user, setUser] = useState(null);
+  const [profileUsername, setProfileUsername] = useState(null);
   const [showAuth, setShowAuth] = useState(false);
   const [authTab, setAuthTab] = useState("signin");
   const [meets, setMeets] = useState([]);
@@ -61,14 +62,6 @@ function HomeInner() {
   const [dateTo, setDateTo] = useState("");
   const [searched, setSearched] = useState(false);
   const [searchCoords, setSearchCoords] = useState(null); // {lat, lon} of searched location
-
-  // "Committed" filter values — only applied when user hits Search Meets
-  const [committedLocation, setCommittedLocation] = useState("");
-  const [committedLocationState, setCommittedLocationState] = useState("");
-  const [committedRadius, setCommittedRadius] = useState("25 mi");
-  const [committedEventType, setCommittedEventType] = useState("All Types");
-  const [committedDateFrom, setCommittedDateFrom] = useState("");
-  const [committedDateTo, setCommittedDateTo] = useState("");
   const [meetCoords, setMeetCoords] = useState({}); // {meetId: {lat, lon}}
   const [geoLoading, setGeoLoading] = useState(false);
 
@@ -115,13 +108,28 @@ function HomeInner() {
     // Get initial session
     supabase.auth.getSession().then(({ data: { session } }) => {
       setUser(session?.user ?? null);
+      if (session?.user) fetchProfileUsername(session.access_token);
     });
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setUser(session?.user ?? null);
+      if (session?.user) fetchProfileUsername(session.access_token);
+      else setProfileUsername(null);
     });
     return () => subscription.unsubscribe();
   }, []);
+
+  async function fetchProfileUsername(token) {
+    try {
+      const res = await fetch(`${API_BASE}/profile/me`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (res.ok) {
+        const p = await res.json();
+        if (p?.username) setProfileUsername(p.username);
+      }
+    } catch (e) { /* silent */ }
+  }
 
   useEffect(() => {
     async function load() {
@@ -146,29 +154,33 @@ function HomeInner() {
 
   const filtered = useMemo(() => {
     let list = [...meets];
-    if (committedLocation.trim()) {
+    if (location.trim()) {
       if (searchCoords) {
-        const radiusMiles = parseInt(committedRadius) || 25;
+        // Radius-based filtering using stored lat/lng on each meet
+        const radiusMiles = parseInt(radius) || 25;
         list = list.filter((m) => {
           if (m.lat && m.lng) {
+            // Use stored coordinates — fast, no API call needed
             return haversineDistance(searchCoords.lat, searchCoords.lon, m.lat, m.lng) <= radiusMiles;
           }
-          return (m.city || "").toLowerCase().includes(committedLocation.trim().toLowerCase());
+          // Fallback to city text match for meets without coordinates
+          return (m.city || "").toLowerCase().includes(location.trim().toLowerCase());
         });
       } else {
-        const needle = committedLocation.trim().toLowerCase();
+        // No geocode result yet — fallback to text match
+        const needle = location.trim().toLowerCase();
         list = list.filter((m) =>
           `${m.city || ""} ${m.state || ""} ${m.title || ""}`.toLowerCase().includes(needle)
         );
       }
     }
-    if (committedEventType !== "All Types") {
-      list = list.filter((m) => (m.event_type || "").toLowerCase() === committedEventType.toLowerCase());
+    if (eventType !== "All Types") {
+      list = list.filter((m) => (m.event_type || "").toLowerCase() === eventType.toLowerCase());
     }
-    if (committedDateFrom) list = list.filter((m) => (m.date || "") >= committedDateFrom);
-    if (committedDateTo) list = list.filter((m) => (m.date || "") <= committedDateTo);
+    if (dateFrom) list = list.filter((m) => (m.date || "") >= dateFrom);
+    if (dateTo) list = list.filter((m) => (m.date || "") <= dateTo);
     return list;
-  }, [meets, committedLocation, committedLocationState, searchCoords, committedRadius, committedEventType, committedDateFrom, committedDateTo]);
+  }, [meets, location, locationState, searchCoords, radius, eventType, dateFrom, dateTo]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const pageSafe = Math.min(Math.max(1, page), totalPages);
@@ -177,19 +189,12 @@ function HomeInner() {
     return filtered.slice(start, start + PAGE_SIZE);
   }, [filtered, pageSafe]);
 
-  useEffect(() => { setPage(1); }, [committedLocation, committedEventType, committedDateFrom, committedDateTo]);
+  useEffect(() => { setPage(1); }, [location, eventType, dateFrom, dateTo]);
 
   async function handleSearch(e) {
     e.preventDefault();
     setMode("find");
     setSearched(true);
-    // Commit all current filter values at search time
-    setCommittedLocation(location);
-    setCommittedLocationState(locationState);
-    setCommittedRadius(radius);
-    setCommittedEventType(eventType);
-    setCommittedDateFrom(dateFrom);
-    setCommittedDateTo(dateTo);
     const query = [location.trim(), locationState.trim()].filter(Boolean).join(", ");
     if (query) {
       setGeoLoading(true);
@@ -229,13 +234,6 @@ function HomeInner() {
     setSearched(false);
     setSearchCoords(null);
     setMode("find");
-    // Also clear committed values
-    setCommittedLocation("");
-    setCommittedLocationState("");
-    setCommittedRadius("25 mi");
-    setCommittedEventType("All Types");
-    setCommittedDateFrom("");
-    setCommittedDateTo("");
   }
 
   async function loadAdminMeets() {
@@ -428,7 +426,20 @@ function HomeInner() {
           <div className="desktop-auth" style={{ display: "flex", gap: 8, alignItems: "center" }}>
             {user ? (
               <>
-                <span style={{ fontSize: 13, color: "#888" }}>{user.email?.split("@")[0]}</span>
+                {profileUsername ? (
+                  <a href={`/u/${profileUsername}`}
+                    style={{ display: "flex", alignItems: "center", gap: 8, textDecoration: "none", background: "none", border: "1.5px solid #E0E0DC", borderRadius: 8, padding: "7px 14px", fontSize: 13, color: "#555", cursor: "pointer" }}>
+                    <div style={{ width: 22, height: 22, borderRadius: "50%", background: "#1a1a1a", display: "grid", placeItems: "center", color: "white", fontSize: 10, fontWeight: 700, flexShrink: 0 }}>
+                      {profileUsername[0].toUpperCase()}
+                    </div>
+                    {profileUsername}
+                  </a>
+                ) : (
+                  <a href="/u/setup"
+                    style={{ fontSize: 13, color: "#888", border: "1.5px solid #E0E0DC", borderRadius: 8, padding: "7px 14px", textDecoration: "none" }}>
+                    Set up profile
+                  </a>
+                )}
                 <button onClick={() => supabase.auth.signOut()}
                   style={{ background: "none", border: "1.5px solid #E0E0DC", borderRadius: 8, padding: "8px 16px", fontSize: 14, color: "#555", cursor: "pointer" }}>
                   Sign out
@@ -476,6 +487,11 @@ function HomeInner() {
             <a href="#">About</a>
             {user ? (
               <>
+                {profileUsername ? (
+                  <a href={`/u/${profileUsername}`} onClick={() => setMenuOpen(false)}>👤 My Profile</a>
+                ) : (
+                  <a href="/u/setup" onClick={() => setMenuOpen(false)}>Set up profile</a>
+                )}
                 <span style={{ fontSize: 13, color: "#888", padding: "14px 0", borderBottom: "1px solid #F0EFEB" }}>{user.email?.split("@")[0]}</span>
                 <button onClick={() => { supabase.auth.signOut(); setMenuOpen(false); }}>Sign out</button>
               </>
