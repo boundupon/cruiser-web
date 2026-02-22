@@ -356,8 +356,7 @@ function HomeInner() {
       // Geocode city + state to get lat/lng for radius search
       let meetLat = null, meetLng = null;
       try {
-        const geoQuery = [hostCity.trim(), hostState.trim()].filter(Boolean).join(", ");
-        const geoRes = await fetch(
+          const geoQuery = [hostLocation.trim(), hostCity.trim(), hostState.trim()].filter(Boolean).join(", ");        const geoRes = await fetch(
           `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(geoQuery)}&format=json&limit=1&countrycodes=us`,
           { headers: { "Accept-Language": "en" } }
         );
