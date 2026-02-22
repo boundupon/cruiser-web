@@ -406,8 +406,8 @@ function HomeInner() {
         }
 
       // Use pre-selected lat/lng from address autocomplete
-      const meetLat = hostLat;
-      const meetLng = hostLng;
+      
+      
 
         const { error: uploadError } = await supabase.storage
           .from("meet-photos")
@@ -435,8 +435,8 @@ function HomeInner() {
           event_type: hostEventType,
           description: hostDescription,
           photo_url: photoUrl,
-          lat: meetLat,
-          lng: meetLng,
+          lat: hostLat,
+          lng: hostLng,
         }),
       });
       if (!res.ok) {
