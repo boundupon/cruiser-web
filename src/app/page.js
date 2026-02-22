@@ -82,6 +82,7 @@ function HomeInner() {
   const [hostAddressSelected, setHostAddressSelected] = useState(false);
   const [hostLat, setHostLat] = useState(null);
   const [hostLng, setHostLng] = useState(null);
+  const hostAddressDebounceRef = useRef(null);
   const [hostName, setHostName] = useState("");
   const [hostContact, setHostContact] = useState("");
   const [hostDate, setHostDate] = useState("");
@@ -343,7 +344,6 @@ function HomeInner() {
           `${API_BASE}/geocode/search?q=${encodeURIComponent(val)}`
         );
         const data = await res.json();
-        console.log("[Cruiser] geocode results:", data);
         setHostAddressSuggestions(data || []);
       } catch (e) {
         setHostAddressSuggestions([]);
