@@ -71,6 +71,10 @@ function MeetDetailInner() {
   // Share
   const [copied, setCopied] = useState(false);
 
+  // Favorites
+  const [isFavorited, setIsFavorited] = useState(false);
+  const [favLoading, setFavLoading] = useState(false);
+
   // Map coords from geocoding
   const [mapCoords, setMapCoords] = useState(null);
 
@@ -141,6 +145,45 @@ function MeetDetailInner() {
     }
     if (id) loadComments();
   }, [id]);
+
+  // Load favorite state
+  useEffect(() => {
+    async function loadFavorite() {
+      if (!user || !id) return;
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return;
+      const res = await fetch(`${API_BASE}/favorites`, {
+        headers: { Authorization: `Bearer ${session.access_token}` }
+      });
+      if (!res.ok) return;
+      const ids = await res.json();
+      setIsFavorited(ids.includes(parseInt(id)));
+    }
+    loadFavorite();
+  }, [user, id]);
+
+  async function handleFavorite() {
+    if (!user) { setAuthTab("signin"); setShowAuth(true); return; }
+    setFavLoading(true);
+    // Optimistic update
+    setIsFavorited(prev => !prev);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const res = await fetch(`${API_BASE}/favorites/${id}`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${session.access_token}` }
+      });
+      if (!res.ok) throw new Error("Failed");
+      const data = await res.json();
+      setIsFavorited(data.favorited);
+    } catch (e) {
+      // Revert on error
+      setIsFavorited(prev => !prev);
+      console.error("Favorite error:", e);
+    } finally {
+      setFavLoading(false);
+    }
+  }
 
   async function handleRsvp(status) {
     if (!user) { setAuthTab("signin"); setShowAuth(true); return; }
@@ -422,6 +465,19 @@ function MeetDetailInner() {
                 }}>
                 {copied ? "Link copied!" : "Share Event"}
                 <span style={{ color: copied ? "#166534" : "#bbb", fontSize: 12 }}>{copied ? "✓" : "⧉"}</span>
+              </button>
+
+              <button onClick={handleFavorite} disabled={favLoading}
+                style={{
+                  display: "flex", alignItems: "center", justifyContent: "space-between",
+                  background: isFavorited ? "#FFF1F2" : "white",
+                  border: `1.5px solid ${isFavorited ? "#FECDD3" : "#E8E8E4"}`,
+                  borderRadius: 8, padding: "11px 14px", fontSize: 13, fontWeight: 500,
+                  color: isFavorited ? "#E11D48" : "#1a1a1a", cursor: favLoading ? "not-allowed" : "pointer", textAlign: "left",
+                  opacity: favLoading ? 0.7 : 1,
+                }}>
+                {isFavorited ? "❤️ Saved" : "🤍 Save Meet"}
+                <span style={{ fontSize: 12 }}>{isFavorited ? "✓" : "+"}</span>
               </button>
             </div>
           </div>
