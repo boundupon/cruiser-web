@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState, Suspense } from "react";
+import { useEffect, useMemo, useState, useRef, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { supabase } from "./supabaseClient";
 import AuthModal from "./AuthModal";
@@ -76,6 +76,12 @@ function HomeInner() {
   const [hostCity, setHostCity] = useState("");
   const [hostState, setHostState] = useState("");
   const [hostLocation, setHostLocation] = useState("");
+  const [hostAddressInput, setHostAddressInput] = useState("");
+  const [hostAddressSuggestions, setHostAddressSuggestions] = useState([]);
+  const [hostAddressLoading, setHostAddressLoading] = useState(false);
+  const [hostAddressSelected, setHostAddressSelected] = useState(false);
+  const [hostLat, setHostLat] = useState(null);
+  const [hostLng, setHostLng] = useState(null);
   const [hostName, setHostName] = useState("");
   const [hostContact, setHostContact] = useState("");
   const [hostDate, setHostDate] = useState("");
@@ -321,8 +327,54 @@ function HomeInner() {
     }
   }
 
+
+  // Address autocomplete using Nominatim
+  function handleAddressInputChange(val) {
+    setHostAddressInput(val);
+    setHostAddressSelected(false);
+    setHostLat(null);
+    setHostLng(null);
+    if (hostAddressDebounceRef.current) clearTimeout(hostAddressDebounceRef.current);
+    if (val.trim().length < 5) { setHostAddressSuggestions([]); return; }
+    hostAddressDebounceRef.current = setTimeout(async () => {
+      setHostAddressLoading(true);
+      try {
+        const res = await fetch(
+          `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(val)}&format=json&limit=5&countrycodes=us&addressdetails=1`,
+          { headers: { "Accept-Language": "en" } }
+        );
+        const data = await res.json();
+        setHostAddressSuggestions(data || []);
+      } catch (e) {
+        setHostAddressSuggestions([]);
+      } finally {
+        setHostAddressLoading(false);
+      }
+    }, 400);
+  }
+
+  function handleAddressSelect(suggestion) {
+    const addr = suggestion.address || {};
+    const city = addr.city || addr.town || addr.village || addr.county || "";
+    const state = addr.state || "";
+    const display = suggestion.display_name || "";
+    setHostAddressInput(display.split(",").slice(0, 3).join(",").trim());
+    setHostLocation(display);
+    setHostCity(city);
+    setHostState(state);
+    setHostLat(parseFloat(suggestion.lat));
+    setHostLng(parseFloat(suggestion.lon));
+    setHostAddressSuggestions([]);
+    setHostAddressSelected(true);
+  }
+
   async function handleHostSubmit(e) {
     e.preventDefault();
+    // Require address to be selected from autocomplete
+    if (!hostAddressSelected || !hostLat || !hostLng) {
+      setHostError("Please select a valid address from the suggestions dropdown.");
+      return;
+    }
     setHostSubmitting(true);
     setHostError("");
     try {
@@ -353,21 +405,9 @@ function HomeInner() {
           throw new Error("Photo upload failed: You must be signed in to upload a photo.");
         }
 
-      // Geocode city + state to get lat/lng for radius search
-      let meetLat = null, meetLng = null;
-      try {
-          const geoQuery = [hostLocation.trim(), hostCity.trim(), hostState.trim()].filter(Boolean).join(", ");        const geoRes = await fetch(
-          `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(geoQuery)}&format=json&limit=1&countrycodes=us`,
-          { headers: { "Accept-Language": "en" } }
-        );
-        const geoData = await geoRes.json();
-        if (geoData && geoData[0]) {
-          meetLat = parseFloat(geoData[0].lat);
-          meetLng = parseFloat(geoData[0].lon);
-        }
-      } catch (e) {
-        console.warn("Geocoding failed, meet will still be submitted:", e);
-      }
+      // Use pre-selected lat/lng from address autocomplete
+      const meetLat = hostLat;
+      const meetLng = hostLng;
 
         const { error: uploadError } = await supabase.storage
           .from("meet-photos")
@@ -405,6 +445,8 @@ function HomeInner() {
       }
       setHostSuccess(true);
       setHostTitle(""); setHostCity(""); setHostState(""); setHostLocation("");
+      setHostAddressInput(""); setHostAddressSuggestions([]); setHostAddressSelected(false);
+      setHostLat(null); setHostLng(null);
       setHostName(""); setHostContact(""); setHostDate("");
       setHostTime(""); setHostDescription(""); setHostPhoto("");
       setHostPhotoFile(null); setHostPhotoPreview("");
@@ -668,20 +710,45 @@ function HomeInner() {
                         <input required value={hostTitle} onChange={(e) => setHostTitle(e.target.value)}
                           placeholder="e.g. Sunday Morning Cars and Coffee" style={inp} />
                       </div>
-                      <div>
-                        <label style={lbl}>City *</label>
-                        <input required value={hostCity} onChange={(e) => setHostCity(e.target.value)}
-                          placeholder="e.g. Norfolk" style={inp} />
-                      </div>
-                      <div>
-                        <label style={lbl}>State *</label>
-                        <input required value={hostState} onChange={(e) => setHostState(e.target.value)}
-                          placeholder="e.g. VA" style={inp} />
-                      </div>
-                      <div style={{ gridColumn: isMobile ? "1" : "3 / -1" }}>
-                        <label style={lbl}>Location / venue</label>
-                        <input value={hostLocation} onChange={(e) => setHostLocation(e.target.value)}
-                          placeholder="e.g. Waterside District" style={inp} />
+                      <div style={{ gridColumn: isMobile ? "1" : "1 / -1", position: "relative" }}>
+                        <label style={lbl}>Venue address * <span style={{ color: "#bbb", fontWeight: 400 }}>(start typing to search)</span></label>
+                        <input
+                          value={hostAddressInput}
+                          onChange={(e) => handleAddressInputChange(e.target.value)}
+                          placeholder="e.g. 333 Waterside Dr, Norfolk, VA"
+                          style={{ ...inp, borderColor: hostAddressSelected ? "#22c55e" : hostAddressInput && !hostAddressSelected ? "#f59e0b" : "#E8E8E4" }}
+                          autoComplete="off"
+                        />
+                        {hostAddressSelected && (
+                          <div style={{ fontSize: 12, color: "#22c55e", marginTop: 4 }}>✓ Address confirmed</div>
+                        )}
+                        {hostAddressInput && !hostAddressSelected && !hostAddressLoading && (
+                          <div style={{ fontSize: 12, color: "#f59e0b", marginTop: 4 }}>⚠ Please select an address from the dropdown</div>
+                        )}
+                        {hostAddressLoading && (
+                          <div style={{ fontSize: 12, color: "#aaa", marginTop: 4 }}>Searching...</div>
+                        )}
+                        {hostAddressSuggestions.length > 0 && (
+                          <div style={{
+                            position: "absolute", top: "100%", left: 0, right: 0, background: "white",
+                            border: "1.5px solid #E8E8E4", borderRadius: 8, zIndex: 100,
+                            boxShadow: "0 4px 20px rgba(0,0,0,0.1)", maxHeight: 220, overflowY: "auto"
+                          }}>
+                            {hostAddressSuggestions.map((s, i) => (
+                              <div key={i} onClick={() => handleAddressSelect(s)}
+                                style={{
+                                  padding: "10px 14px", fontSize: 13, cursor: "pointer",
+                                  borderBottom: i < hostAddressSuggestions.length - 1 ? "1px solid #F0EFEB" : "none",
+                                  color: "#1a1a1a"
+                                }}
+                                onMouseEnter={(e) => e.currentTarget.style.background = "#F5F5F3"}
+                                onMouseLeave={(e) => e.currentTarget.style.background = "white"}
+                              >
+                                📍 {s.display_name}
+                              </div>
+                            ))}
+                          </div>
+                        )}
                       </div>
                       <div>
                         <label style={lbl}>Host name *</label>
