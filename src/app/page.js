@@ -62,6 +62,13 @@ function HomeInner() {
   const [dateTo, setDateTo] = useState("");
   const [searched, setSearched] = useState(false);
   const [searchCoords, setSearchCoords] = useState(null); // {lat, lon} of searched location
+
+  // Committed filter values — only update when user hits Search/Enter
+  const [committedLocation, setCommittedLocation] = useState("");
+  const [committedEventType, setCommittedEventType] = useState("All Types");
+  const [committedDateFrom, setCommittedDateFrom] = useState("");
+  const [committedDateTo, setCommittedDateTo] = useState("");
+  const [committedSearchCoords, setCommittedSearchCoords] = useState(null);
   const [meetCoords, setMeetCoords] = useState({}); // {meetId: {lat, lon}}
   const [geoLoading, setGeoLoading] = useState(false);
 
@@ -173,33 +180,32 @@ function HomeInner() {
 
   const filtered = useMemo(() => {
     let list = [...meets];
-    if (location.trim()) {
-      if (searchCoords) {
+    if (committedLocation.trim()) {
+      if (committedSearchCoords) {
         // Radius-based filtering using stored lat/lng on each meet
         const radiusMiles = parseInt(radius) || 25;
         list = list.filter((m) => {
           if (m.lat && m.lng) {
-            // Use stored coordinates — fast, no API call needed
-            return haversineDistance(searchCoords.lat, searchCoords.lon, m.lat, m.lng) <= radiusMiles;
+            return haversineDistance(committedSearchCoords.lat, committedSearchCoords.lon, m.lat, m.lng) <= radiusMiles;
           }
           // Fallback to city text match for meets without coordinates
-          return (m.city || "").toLowerCase().includes(location.trim().toLowerCase());
+          return (m.city || "").toLowerCase().includes(committedLocation.trim().toLowerCase());
         });
       } else {
         // No geocode result yet — fallback to text match
-        const needle = location.trim().toLowerCase();
+        const needle = committedLocation.trim().toLowerCase();
         list = list.filter((m) =>
           `${m.city || ""} ${m.state || ""} ${m.title || ""}`.toLowerCase().includes(needle)
         );
       }
     }
-    if (eventType !== "All Types") {
-      list = list.filter((m) => (m.event_type || "").toLowerCase() === eventType.toLowerCase());
+    if (committedEventType !== "All Types") {
+      list = list.filter((m) => (m.event_type || "").toLowerCase() === committedEventType.toLowerCase());
     }
-    if (dateFrom) list = list.filter((m) => (m.date || "") >= dateFrom);
-    if (dateTo) list = list.filter((m) => (m.date || "") <= dateTo);
+    if (committedDateFrom) list = list.filter((m) => (m.date || "") >= committedDateFrom);
+    if (committedDateTo) list = list.filter((m) => (m.date || "") <= committedDateTo);
     return list;
-  }, [meets, location, locationState, searchCoords, radius, eventType, dateFrom, dateTo]);
+  }, [meets, committedLocation, committedSearchCoords, radius, committedEventType, committedDateFrom, committedDateTo]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const pageSafe = Math.min(Math.max(1, page), totalPages);
@@ -208,12 +214,16 @@ function HomeInner() {
     return filtered.slice(start, start + PAGE_SIZE);
   }, [filtered, pageSafe]);
 
-  useEffect(() => { setPage(1); }, [location, eventType, dateFrom, dateTo]);
+  useEffect(() => { setPage(1); }, [committedLocation, committedEventType, committedDateFrom, committedDateTo]);
 
   async function handleSearch(e) {
     e.preventDefault();
     setMode("find");
     setSearched(true);
+    // Commit all filter values so filtering only happens on submit
+    setCommittedEventType(eventType);
+    setCommittedDateFrom(dateFrom);
+    setCommittedDateTo(dateTo);
     const query = [location.trim(), locationState.trim()].filter(Boolean).join(", ");
     if (query) {
       setGeoLoading(true);
@@ -224,21 +234,28 @@ function HomeInner() {
         );
         const data = await res.json();
         if (data && data[0]) {
-          setSearchCoords({ lat: parseFloat(data[0].lat), lon: parseFloat(data[0].lon) });
+          const coords = { lat: parseFloat(data[0].lat), lon: parseFloat(data[0].lon) };
+          setSearchCoords(coords);
+          setCommittedSearchCoords(coords);
           const parts = (data[0].display_name || "").split(",");
           setDetectedLocation(parts.slice(0, 2).join(",").trim());
         } else {
           setSearchCoords(null);
+          setCommittedSearchCoords(null);
           setDetectedLocation("");
         }
       } catch (e) {
         console.error("Geocode error:", e);
         setSearchCoords(null);
+        setCommittedSearchCoords(null);
       } finally {
+        setCommittedLocation(location);
         setGeoLoading(false);
       }
     } else {
       setSearchCoords(null);
+      setCommittedSearchCoords(null);
+      setCommittedLocation(location);
     }
   }
 
@@ -252,6 +269,12 @@ function HomeInner() {
     setDateTo("");
     setSearched(false);
     setSearchCoords(null);
+    // Reset committed state too
+    setCommittedLocation("");
+    setCommittedEventType("All Types");
+    setCommittedDateFrom("");
+    setCommittedDateTo("");
+    setCommittedSearchCoords(null);
     setMode("find");
   }
 
