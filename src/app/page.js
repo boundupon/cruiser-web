@@ -82,7 +82,6 @@ function HomeInner() {
   const [hostAddressSelected, setHostAddressSelected] = useState(false);
   const [hostLat, setHostLat] = useState(null);
   const [hostLng, setHostLng] = useState(null);
-  const hostAddressDebounceRef = useRef(null);
   const [hostName, setHostName] = useState("");
   const [hostContact, setHostContact] = useState("");
   const [hostDate, setHostDate] = useState("");
@@ -358,7 +357,7 @@ function HomeInner() {
     const city = addr.city || addr.town || addr.village || addr.county || "";
     const state = addr.state || "";
     const display = suggestion.display_name || "";
-    setHostAddressInput(display.split(",").slice(0, 3).join(",").trim());
+    setHostAddressInput(suggestion.display_name);
     setHostLocation(display);
     setHostCity(city);
     setHostState(state);
@@ -405,10 +404,6 @@ function HomeInner() {
           throw new Error("Photo upload failed: You must be signed in to upload a photo.");
         }
 
-      // Use pre-selected lat/lng from address autocomplete
-      const meetLat = hostLat;
-      const meetLng = hostLng;
-
         const { error: uploadError } = await supabase.storage
           .from("meet-photos")
           .upload(fileName, hostPhotoFile, {
@@ -435,8 +430,8 @@ function HomeInner() {
           event_type: hostEventType,
           description: hostDescription,
           photo_url: photoUrl,
-          lat: meetLat,
-          lng: meetLng,
+          lat: hostLat,
+          lng: hostLng,
         }),
       });
       if (!res.ok) {
