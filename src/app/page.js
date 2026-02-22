@@ -45,6 +45,8 @@ function HomeInner() {
   const searchParams = useSearchParams();
   const [user, setUser] = useState(null);
   const [profileUsername, setProfileUsername] = useState(null);
+  const [favoriteIds, setFavoriteIds] = useState(new Set());
+  const [togglingFavId, setTogglingFavId] = useState(null);
   const [showAuth, setShowAuth] = useState(false);
   const [authTab, setAuthTab] = useState("signin");
   const [meets, setMeets] = useState([]);
@@ -125,6 +127,7 @@ function HomeInner() {
       if (session?.user) {
         fetchProfileUsername(session.access_token);
         checkAndRedirectToSetup(session.access_token);
+        loadFavoriteIds(session.access_token);
       }
     });
     // Listen for auth changes
@@ -133,10 +136,57 @@ function HomeInner() {
       if (session?.user) {
         fetchProfileUsername(session.access_token);
         checkAndRedirectToSetup(session.access_token);
-      } else setProfileUsername(null);
+        loadFavoriteIds(session.access_token);
+      } else {
+        setProfileUsername(null);
+        setFavoriteIds(new Set());
+      }
     });
     return () => subscription.unsubscribe();
   }, []);
+
+  async function loadFavoriteIds(token) {
+    try {
+      const res = await fetch(`${API_BASE}/favorites`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (!res.ok) return;
+      const ids = await res.json();
+      setFavoriteIds(new Set(ids));
+    } catch (e) { console.error("Error loading favorites:", e); }
+  }
+
+  async function handleToggleFavorite(e, meetId) {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!user) { setAuthTab("signin"); setShowAuth(true); return; }
+    setTogglingFavId(meetId);
+    setFavoriteIds(prev => {
+      const next = new Set(prev);
+      next.has(meetId) ? next.delete(meetId) : next.add(meetId);
+      return next;
+    });
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const res = await fetch(`${API_BASE}/favorites/${meetId}`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${session.access_token}` }
+      });
+      if (!res.ok) throw new Error("Failed");
+      const data = await res.json();
+      setFavoriteIds(prev => {
+        const next = new Set(prev);
+        data.favorited ? next.add(meetId) : next.delete(meetId);
+        return next;
+      });
+    } catch (e) {
+      setFavoriteIds(prev => {
+        const next = new Set(prev);
+        next.has(meetId) ? next.delete(meetId) : next.add(meetId);
+        return next;
+      });
+    } finally { setTogglingFavId(null); }
+  }
 
   async function checkAndRedirectToSetup(token) {
     try {
@@ -509,6 +559,11 @@ function HomeInner() {
           <div className="desktop-auth" style={{ display: "flex", gap: 8, alignItems: "center" }}>
             {user ? (
               <>
+                {user && (
+                  <a href="/saved" style={{ fontSize: 14, color: "#888", textDecoration: "none", display: "flex", alignItems: "center", gap: 5 }}>
+                    ❤️ Saved
+                  </a>
+                )}
                 {profileUsername ? (
                   <a href={`/u/${profileUsername}`}
                     style={{ display: "flex", alignItems: "center", gap: 8, textDecoration: "none", background: "none", border: "1.5px solid #E0E0DC", borderRadius: 8, padding: "7px 14px", fontSize: 13, color: "#555", cursor: "pointer" }}>
@@ -570,11 +625,17 @@ function HomeInner() {
             <a href="#">About</a>
             {user ? (
               <>
+                {user && (
+                  <a href="/saved" style={{ fontSize: 14, color: "#888", textDecoration: "none", display: "flex", alignItems: "center", gap: 5 }}>
+                    ❤️ Saved
+                  </a>
+                )}
                 {profileUsername ? (
                   <a href={`/u/${profileUsername}`} onClick={() => setMenuOpen(false)}>👤 My Profile</a>
                 ) : (
                   <a href="/profile/setup" onClick={() => setMenuOpen(false)}>Set up profile</a>
                 )}
+                <a href="/saved" onClick={() => setMenuOpen(false)}>❤️ Saved Meets</a>
                 <span style={{ fontSize: 13, color: "#888", padding: "14px 0", borderBottom: "1px solid #F0EFEB" }}>{user.email?.split("@")[0]}</span>
                 <button onClick={() => { supabase.auth.signOut(); setMenuOpen(false); }}>Sign out</button>
               </>
@@ -884,7 +945,25 @@ function HomeInner() {
               const fallback = gradients[m.event_type] || "linear-gradient(135deg, #1a1a1a, #444)";
               return (
               <article key={m.id} className="meet-card"
-                style={{ background: "white", border: "1.5px solid #E8E8E4", borderRadius: 12, overflow: "hidden", cursor: "pointer" }}>
+                style={{ background: "white", border: "1.5px solid #E8E8E4", borderRadius: 12, overflow: "hidden", cursor: "pointer", position: "relative" }}>
+                {/* Heart / Save button */}
+                <button
+                  onClick={(e) => handleToggleFavorite(e, m.id)}
+                  disabled={togglingFavId === m.id}
+                  title={favoriteIds.has(m.id) ? "Remove from saved" : "Save meet"}
+                  style={{
+                    position: "absolute", top: 10, right: 10, zIndex: 10,
+                    background: "rgba(255,255,255,0.92)", border: "none", borderRadius: "50%",
+                    width: 34, height: 34, display: "flex", alignItems: "center", justifyContent: "center",
+                    cursor: togglingFavId === m.id ? "not-allowed" : "pointer",
+                    fontSize: 16, boxShadow: "0 1px 4px rgba(0,0,0,0.12)",
+                    opacity: togglingFavId === m.id ? 0.5 : 1, transition: "transform 0.15s",
+                  }}
+                  onMouseEnter={e => e.currentTarget.style.transform = "scale(1.15)"}
+                  onMouseLeave={e => e.currentTarget.style.transform = "scale(1)"}
+                >
+                  {favoriteIds.has(m.id) ? "❤️" : "🤍"}
+                </button>
                 {/* Banner */}
                 <div style={{
                   height: 160,
