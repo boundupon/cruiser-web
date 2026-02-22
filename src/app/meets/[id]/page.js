@@ -108,25 +108,12 @@ function MeetDetailInner() {
     if (id) load();
   }, [id]);
 
-  // Geocode address for map
+  // Use stored lat/lng from database for map
   useEffect(() => {
-    async function geocode() {
-      if (!meet) return;
-      const query = [meet.location, meet.city].filter(Boolean).join(", ");
-      try {
-        const res = await fetch(
-          `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&limit=1`,
-          { headers: { "Accept-Language": "en" } }
-        );
-        const data = await res.json();
-        if (data && data[0]) {
-          setMapCoords({ lat: parseFloat(data[0].lat), lon: parseFloat(data[0].lon) });
-        }
-      } catch (e) {
-        console.error("Geocoding failed:", e);
-      }
+    if (!meet) return;
+    if (meet.lat && meet.lng) {
+      setMapCoords({ lat: parseFloat(meet.lat), lon: parseFloat(meet.lng) });
     }
-    geocode();
   }, [meet]);
 
   // Load RSVPs
