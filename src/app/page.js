@@ -335,13 +335,12 @@ function HomeInner() {
     setHostLat(null);
     setHostLng(null);
     if (hostAddressDebounceRef.current) clearTimeout(hostAddressDebounceRef.current);
-    if (val.trim().length < 5) { setHostAddressSuggestions([]); return; }
+    if (val.trim().length < 3) { setHostAddressSuggestions([]); return; }
     hostAddressDebounceRef.current = setTimeout(async () => {
       setHostAddressLoading(true);
       try {
         const res = await fetch(
-          `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(val)}&format=json&limit=5&countrycodes=us&addressdetails=1`,
-          { headers: { "Accept-Language": "en" } }
+          `${API_BASE}/geocode/search?q=${encodeURIComponent(val)}`
         );
         const data = await res.json();
         setHostAddressSuggestions(data || []);
