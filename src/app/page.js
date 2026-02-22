@@ -343,6 +343,7 @@ function HomeInner() {
           `${API_BASE}/geocode/search?q=${encodeURIComponent(val)}`
         );
         const data = await res.json();
+        console.log("[Cruiser] geocode results:", data);
         setHostAddressSuggestions(data || []);
       } catch (e) {
         setHostAddressSuggestions([]);
@@ -703,7 +704,7 @@ function HomeInner() {
                   </div>
                 ) : (
                   <form onSubmit={handleHostSubmit}>
-                    <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr 1fr", gap: 12, marginBottom: 12, overflow: "visible" }}>
+                    <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr 1fr", gap: 12, marginBottom: 12 }}>
                       <div style={{ gridColumn: isMobile ? "1" : "1 / -1" }}>
                         <label style={lbl}>Event title *</label>
                         <input required value={hostTitle} onChange={(e) => setHostTitle(e.target.value)}
@@ -729,9 +730,9 @@ function HomeInner() {
                         )}
                         {hostAddressSuggestions.length > 0 && (
                           <div style={{
-                            position: "absolute", top: "calc(100% + 4px)", left: 0, right: 0, background: "white",
-                            border: "1.5px solid #E8E8E4", borderRadius: 8, zIndex: 9999,
-                            boxShadow: "0 8px 32px rgba(0,0,0,0.15)", maxHeight: 240, overflowY: "auto"
+                            position: "absolute", top: "100%", left: 0, right: 0, background: "white",
+                            border: "1.5px solid #E8E8E4", borderRadius: 8, zIndex: 100,
+                            boxShadow: "0 4px 20px rgba(0,0,0,0.1)", maxHeight: 220, overflowY: "auto"
                           }}>
                             {hostAddressSuggestions.map((s, i) => (
                               <div key={i} onClick={() => handleAddressSelect(s)}
