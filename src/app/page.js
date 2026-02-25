@@ -947,7 +947,8 @@ function HomeInner() {
               const fallback = gradients[m.event_type] || "linear-gradient(135deg, #1a1a1a, #444)";
               return (
               <article key={m.id} className="meet-card"
-                style={{ background: "white", border: "1.5px solid #E8E8E4", borderRadius: 12, overflow: "hidden", cursor: "pointer" }}>
+                style={{ background: "white", border: "1.5px solid #E8E8E4", borderRadius: 12, overflow: "hidden", cursor: "pointer" }}
+                onClick={(e) => { if (e.target.tagName !== "BUTTON" && e.target.tagName !== "A") window.location.href = `/meets/${m.id}`; }}>
                 {/* Heart / Save button */}
 
                 {/* Banner */}

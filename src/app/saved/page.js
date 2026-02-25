@@ -148,7 +148,8 @@ export default function SavedMeetsPage() {
             {meets.map(m => {
               const fallback = gradients[m.event_type] || "linear-gradient(135deg, #1a1a1a, #444)";
               return (
-                <article key={m.id} style={{ background: "white", border: "1.5px solid #E8E8E4", borderRadius: 12, overflow: "hidden", transition: "all 0.18s ease" }}
+                <article key={m.id} style={{ background: "white", border: "1.5px solid #E8E8E4", borderRadius: 12, overflow: "hidden", transition: "all 0.18s ease", cursor: "pointer" }}
+                  onClick={(e) => { if (e.target.tagName !== "BUTTON") router.push(`/meets/${m.id}`); }}
                   onMouseEnter={e => { e.currentTarget.style.borderColor = "#d0d0cc"; e.currentTarget.style.boxShadow = "0 4px 24px rgba(0,0,0,0.07)"; e.currentTarget.style.transform = "translateY(-1px)"; }}
                   onMouseLeave={e => { e.currentTarget.style.borderColor = "#E8E8E4"; e.currentTarget.style.boxShadow = "none"; e.currentTarget.style.transform = "none"; }}>
 
@@ -170,7 +171,7 @@ export default function SavedMeetsPage() {
                       </span>
                       <span style={{ fontSize: 12, color: "#aaa" }}>{formatDatePretty(m.date)}</span>
                     </div>
-                    <h3 style={{ fontSize: 16, fontWeight: 600, margin: "0 0 6px", cursor: "pointer" }}
+                    <h3 style={{ fontSize: 16, fontWeight: 600, margin: "0 0 6px", color: "#1a1a1a", cursor: "pointer" }}
                       onClick={() => router.push(`/meets/${m.id}`)}>
                       {m.title || "Untitled Meet"}
                     </h3>
