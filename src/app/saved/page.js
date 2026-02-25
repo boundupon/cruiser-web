@@ -107,7 +107,7 @@ export default function SavedMeetsPage() {
         {/* Header */}
         <div style={{ marginBottom: 32 }}>
           <h1 style={{ fontSize: 28, fontWeight: 600, margin: "0 0 6px", color: "#1a1a1a" }}>
-            ❤️ Saved Meets
+            Saved Meets
           </h1>
           <p style={{ fontSize: 14, color: "#888", margin: 0 }}>
             {loading ? "Loading..." : meets.length === 0 ? "No saved meets yet" : `${meets.length} saved meet${meets.length !== 1 ? "s" : ""}`}
@@ -132,7 +132,9 @@ export default function SavedMeetsPage() {
         {/* Empty state */}
         {!loading && meets.length === 0 && (
           <div style={{ textAlign: "center", padding: "80px 0" }}>
-            <div style={{ fontSize: 48, marginBottom: 16 }}>🤍</div>
+            <div style={{ marginBottom: 16, color: "#ddd" }}>
+              <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg>
+            </div>
             <div style={{ fontSize: 18, fontWeight: 600, marginBottom: 8, color: "#1a1a1a" }}>No saved meets yet</div>
             <div style={{ fontSize: 14, color: "#888", marginBottom: 24 }}>Heart a meet from the events page or meet details to save it here.</div>
             <button onClick={() => router.push("/")}
@@ -162,10 +164,10 @@ export default function SavedMeetsPage() {
                       background: "rgba(255,255,255,0.92)", border: "none", borderRadius: "50%",
                       width: 34, height: 34, display: "flex", alignItems: "center", justifyContent: "center",
                       cursor: togglingId === m.id ? "not-allowed" : "pointer",
-                      fontSize: 16, boxShadow: "0 1px 4px rgba(0,0,0,0.12)",
-                      opacity: togglingId === m.id ? 0.5 : 1,
+                      boxShadow: "0 1px 4px rgba(0,0,0,0.12)",
+                      opacity: togglingId === m.id ? 0.5 : 1, color: "#E11D48",
                     }}>
-                    ❤️
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="#E11D48" stroke="#E11D48" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg>
                   </button>
 
                   {/* Banner */}
