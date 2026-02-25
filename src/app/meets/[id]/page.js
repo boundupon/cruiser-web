@@ -54,6 +54,8 @@ function MeetDetailInner() {
   const [error, setError] = useState("");
 
   const [user, setUser] = useState(null);
+  const [profileUsername, setProfileUsername] = useState(null);
+  const [profilePhotoUrl, setProfilePhotoUrl] = useState(null);
   const [showAuth, setShowAuth] = useState(false);
   const [authTab, setAuthTab] = useState("signin");
 
@@ -95,8 +97,15 @@ function MeetDetailInner() {
 
   // Auth listener
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => setUser(session?.user ?? null));
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_e, session) => setUser(session?.user ?? null));
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setUser(session?.user ?? null);
+      if (session?.access_token) fetchProfileData(session.access_token);
+    });
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_e, session) => {
+      setUser(session?.user ?? null);
+      if (session?.access_token) fetchProfileData(session.access_token);
+      else { setProfileUsername(null); setProfilePhotoUrl(null); }
+    });
     return () => subscription.unsubscribe();
   }, []);
 
@@ -236,7 +245,7 @@ function MeetDetailInner() {
     setCommentSubmitting(true);
     setCommentError("");
     try {
-      const username = user.user_metadata?.full_name || user.email?.split("@")[0] || "Anonymous";
+      const username = profileUsername || user.email?.split("@")[0] || "Anonymous";
       const { data, error } = await supabase.from("comments").insert({
         meet_id: id,
         user_id: user.id,
@@ -257,6 +266,66 @@ function MeetDetailInner() {
   async function handleDeleteComment(commentId) {
     const { error } = await supabase.from("comments").delete().eq("id", commentId);
     if (!error) setComments(prev => prev.filter(c => c.id !== commentId));
+  }
+
+  async function fetchProfileData(token) {
+    try {
+      const res = await fetch(`${API_BASE}/profile/me`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (res.ok) {
+        const p = await res.json();
+        if (p?.username) setProfileUsername(p.username);
+        if (p?.profile_photo_url) setProfilePhotoUrl(p.profile_photo_url);
+      }
+    } catch (e) { /* silent */ }
+  }
+
+  async function handleReplySubmit(parentId) {
+    if (!user || !replyBody.trim()) return;
+    setReplySubmitting(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const res = await fetch(`${API_BASE}/meets/${id}/comments/${parentId}/replies`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${session.access_token}` },
+        body: JSON.stringify({
+          body: replyBody.trim(),
+          username: profileUsername || user.email?.split("@")[0] || "Anonymous",
+        }),
+      });
+      if (!res.ok) throw new Error("Failed");
+      const data = await res.json();
+      // Attach current user's photo to the new reply optimistically
+      setComments(prev => [...prev, { ...data, profile_photo_url: profilePhotoUrl }]);
+      setReplyBody("");
+      setReplyingTo(null);
+      setExpandedReplies(prev => new Set([...prev, parentId]));
+    } catch (e) { console.error("Reply error:", e); }
+    finally { setReplySubmitting(false); }
+  }
+
+  async function handleLikeComment(commentId) {
+    if (!user) { setAuthTab("signin"); setShowAuth(true); return; }
+    setLikingId(commentId);
+    const wasLiked = likedCommentIds.has(commentId);
+    setLikedCommentIds(prev => { const n = new Set(prev); wasLiked ? n.delete(commentId) : n.add(commentId); return n; });
+    setComments(prev => prev.map(c => c.id === commentId ? { ...c, like_count: (c.like_count || 0) + (wasLiked ? -1 : 1) } : c));
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      await fetch(`${API_BASE}/comments/${commentId}/like`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${session.access_token}` },
+      });
+    } catch {
+      setLikedCommentIds(prev => { const n = new Set(prev); wasLiked ? n.add(commentId) : n.delete(commentId); return n; });
+      setComments(prev => prev.map(c => c.id === commentId ? { ...c, like_count: (c.like_count || 0) + (wasLiked ? 1 : -1) } : c));
+    } finally { setLikingId(null); }
+  }
+
+  function startReply(comment) {
+    setReplyingTo({ id: comment.id, username: comment.username });
+    setReplyBody(`@${comment.username} `);
   }
 
   function handleShare() {
@@ -555,9 +624,13 @@ function MeetDetailInner() {
               {user ? (
                 <form onSubmit={handleCommentSubmit}>
                   <div style={{ display: "flex", gap: 10, alignItems: "flex-start" }}>
-                    <div style={{ width: 36, height: 36, background: "#1a1a1a", borderRadius: "50%", display: "grid", placeItems: "center", color: "white", fontSize: 13, fontWeight: 600, flexShrink: 0 }}>
-                      {(user.user_metadata?.full_name || user.email || "?")[0].toUpperCase()}
-                    </div>
+                    {profilePhotoUrl ? (
+                      <img src={profilePhotoUrl} alt="" style={{ width: 36, height: 36, borderRadius: "50%", objectFit: "cover", flexShrink: 0 }} />
+                    ) : (
+                      <div style={{ width: 36, height: 36, background: "#1a1a1a", borderRadius: "50%", display: "grid", placeItems: "center", color: "white", fontSize: 13, fontWeight: 600, flexShrink: 0 }}>
+                        {(profileUsername || user.email || "?")[0].toUpperCase()}
+                      </div>
+                    )}
                     <div style={{ flex: 1 }}>
                       <textarea
                         value={commentBody}
@@ -615,9 +688,13 @@ function MeetDetailInner() {
                         {/* Top-level comment */}
                         <div className="comment-row"
                           style={{ display: "flex", gap: 12, padding: "16px 0", position: "relative" }}>
-                          <div style={{ width: 36, height: 36, background: "#E8E8E4", borderRadius: "50%", display: "grid", placeItems: "center", color: "#555", fontSize: 13, fontWeight: 600, flexShrink: 0 }}>
-                            {(c.username || "?")[0].toUpperCase()}
-                          </div>
+                          {c.profile_photo_url ? (
+                            <img src={c.profile_photo_url} alt="" style={{ width: 36, height: 36, borderRadius: "50%", objectFit: "cover", flexShrink: 0 }} />
+                          ) : (
+                            <div style={{ width: 36, height: 36, background: "#E8E8E4", borderRadius: "50%", display: "grid", placeItems: "center", color: "#555", fontSize: 13, fontWeight: 600, flexShrink: 0 }}>
+                              {(c.username || "?")[0].toUpperCase()}
+                            </div>
+                          )}
                           <div style={{ flex: 1, minWidth: 0 }}>
                             <div style={{ display: "flex", alignItems: "baseline", gap: 8, marginBottom: 4 }}>
                               <span style={{ fontSize: 13, fontWeight: 600 }}>{c.username}</span>
@@ -660,9 +737,13 @@ function MeetDetailInner() {
                             {/* Reply input */}
                             {replyingTo?.id === c.id && (
                               <div style={{ marginTop: 12, display: "flex", gap: 8, alignItems: "flex-start" }}>
-                                <div style={{ width: 28, height: 28, background: "#1a1a1a", borderRadius: "50%", display: "grid", placeItems: "center", color: "white", fontSize: 11, fontWeight: 600, flexShrink: 0 }}>
-                                  {(user?.user_metadata?.username || user?.email || "?")[0].toUpperCase()}
-                                </div>
+                                {profilePhotoUrl ? (
+                                  <img src={profilePhotoUrl} alt="" style={{ width: 28, height: 28, borderRadius: "50%", objectFit: "cover", flexShrink: 0 }} />
+                                ) : (
+                                  <div style={{ width: 28, height: 28, background: "#1a1a1a", borderRadius: "50%", display: "grid", placeItems: "center", color: "white", fontSize: 11, fontWeight: 600, flexShrink: 0 }}>
+                                    {(profileUsername || user?.email || "?")[0].toUpperCase()}
+                                  </div>
+                                )}
                                 <div style={{ flex: 1 }}>
                                   <textarea
                                     autoFocus
@@ -703,9 +784,13 @@ function MeetDetailInner() {
                               return (
                                 <div key={r.id} className="comment-row"
                                   style={{ display: "flex", gap: 10, padding: "10px 0", position: "relative", borderBottom: "1px solid #F8F7F5" }}>
-                                  <div style={{ width: 28, height: 28, background: "#E8E8E4", borderRadius: "50%", display: "grid", placeItems: "center", color: "#555", fontSize: 11, fontWeight: 600, flexShrink: 0 }}>
-                                    {(r.username || "?")[0].toUpperCase()}
-                                  </div>
+                                  {r.profile_photo_url ? (
+                                    <img src={r.profile_photo_url} alt="" style={{ width: 28, height: 28, borderRadius: "50%", objectFit: "cover", flexShrink: 0 }} />
+                                  ) : (
+                                    <div style={{ width: 28, height: 28, background: "#E8E8E4", borderRadius: "50%", display: "grid", placeItems: "center", color: "#555", fontSize: 11, fontWeight: 600, flexShrink: 0 }}>
+                                      {(r.username || "?")[0].toUpperCase()}
+                                    </div>
+                                  )}
                                   <div style={{ flex: 1, minWidth: 0 }}>
                                     <div style={{ display: "flex", alignItems: "baseline", gap: 8, marginBottom: 3 }}>
                                       <span style={{ fontSize: 13, fontWeight: 600 }}>{r.username}</span>
