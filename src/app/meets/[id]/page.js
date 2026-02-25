@@ -150,7 +150,7 @@ function MeetDetailInner() {
     if (id) loadRsvps();
   }, [id, user]);
 
-  // Load comments + liked IDs
+  // Load comments — runs on id change AND after profileUsername is set (ensures photos load after login)
   useEffect(() => {
     async function loadComments() {
       const res = await fetch(`${API_BASE}/meets/${id}/comments`);
@@ -158,6 +158,11 @@ function MeetDetailInner() {
       const data = await res.json();
       setComments(Array.isArray(data) ? data : []);
     }
+    if (id) loadComments();
+  }, [id, profileUsername]);
+
+  // Load liked IDs — needs auth session
+  useEffect(() => {
     async function loadLikedIds() {
       const { data: { session } } = await supabase.auth.getSession();
       const headers = session ? { Authorization: `Bearer ${session.access_token}` } : {};
@@ -166,7 +171,7 @@ function MeetDetailInner() {
       const ids = await res.json();
       setLikedCommentIds(new Set(ids));
     }
-    if (id) { loadComments(); loadLikedIds(); }
+    if (id) loadLikedIds();
   }, [id, user]);
 
   // Load favorite state
