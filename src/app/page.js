@@ -571,11 +571,11 @@ function HomeInner() {
                 )}
                 {profileUsername ? (
                   <a href={`/u/${profileUsername}`}
-                    style={{ display: "flex", alignItems: "center", gap: 8, textDecoration: "none", background: "none", border: "1.5px solid #E0E0DC", borderRadius: 8, padding: "7px 10px", fontSize: 13, color: "#333", cursor: "pointer" }}>
+                    style={{ display: "flex", alignItems: "center", gap: 7, textDecoration: "none", background: "none", border: "1.5px solid #E0E0DC", borderRadius: 8, padding: "8px 14px", fontSize: 14, color: "#555", cursor: "pointer" }}>
                     {profilePhotoUrl ? (
-                      <img src={profilePhotoUrl} alt="" style={{ width: 26, height: 26, borderRadius: "50%", objectFit: "cover", flexShrink: 0 }} />
+                      <img src={profilePhotoUrl} alt="" style={{ width: 20, height: 20, borderRadius: "50%", objectFit: "cover", flexShrink: 0 }} />
                     ) : (
-                      <div style={{ width: 26, height: 26, borderRadius: "50%", background: "#1a1a1a", display: "grid", placeItems: "center", color: "white", fontSize: 11, fontWeight: 700, flexShrink: 0 }}>
+                      <div style={{ width: 20, height: 20, borderRadius: "50%", background: "#1a1a1a", display: "grid", placeItems: "center", color: "white", fontSize: 10, fontWeight: 700, flexShrink: 0 }}>
                         {(profileDisplayName || profileUsername)[0].toUpperCase()}
                       </div>
                     )}
