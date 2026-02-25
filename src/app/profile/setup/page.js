@@ -21,7 +21,6 @@ export default function ProfileSetupPage() {
   const [authLoading, setAuthLoading] = useState(true);
   const [isMobile, setIsMobile] = useState(false);
 
-  const [displayName, setDisplayName] = useState("");
   const [username, setUsername] = useState("");
   const [city, setCity] = useState("");
   const [state, setState] = useState("");
@@ -120,7 +119,7 @@ export default function ProfileSetupPage() {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${session.access_token}` },
         body: JSON.stringify({
-          username, display_name: displayName,
+          username,
           city, state, bio, social_links: socialLinks,
           profile_photo_url: profilePhotoUrl,
           banner_image_url: bannerUrl,
@@ -247,20 +246,14 @@ export default function ProfileSetupPage() {
               <div style={{ fontSize: 13, color: "#aaa" }}>{avatarUploading ? "Uploading..." : "Click to upload profile photo"}</div>
             </div>
 
-            <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 12, marginBottom: 12 }}>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 12 }}>
               <div>
-                <label style={lbl}>Display Name</label>
-                <input value={displayName} onChange={(e) => setDisplayName(e.target.value)} placeholder="Your name" style={inp} />
+                <label style={lbl}>City</label>
+                <input value={city} onChange={(e) => setCity(e.target.value)} placeholder="Norfolk" style={inp} />
               </div>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
-                <div>
-                  <label style={lbl}>City</label>
-                  <input value={city} onChange={(e) => setCity(e.target.value)} placeholder="Norfolk" style={inp} />
-                </div>
-                <div>
-                  <label style={lbl}>State</label>
-                  <input value={state} onChange={(e) => setState(e.target.value)} placeholder="VA" maxLength={30} style={inp} />
-                </div>
+              <div>
+                <label style={lbl}>State</label>
+                <input value={state} onChange={(e) => setState(e.target.value)} placeholder="VA" maxLength={30} style={inp} />
               </div>
             </div>
 
@@ -307,7 +300,7 @@ export default function ProfileSetupPage() {
           </button>
 
           <p style={{ fontSize: 12, color: "#bbb", textAlign: "center", marginTop: 14, marginBottom: 0 }}>
-            You can change your display name, photo, and bio at any time.
+            You can update your photo and bio at any time.
           </p>
         </form>
       </div>
