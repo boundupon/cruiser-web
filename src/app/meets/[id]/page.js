@@ -253,7 +253,7 @@ function MeetDetailInner() {
         body: commentBody.trim(),
       }).select().single();
       if (error) throw error;
-      setComments(prev => [...prev, data]);
+      setComments(prev => [...prev, { ...data, like_count: 0, profile_photo_url: profilePhotoUrl }]);
       setCommentBody("");
     } catch (e) {
       setCommentError("Failed to post comment. Please try again.");
@@ -797,14 +797,28 @@ function MeetDetailInner() {
                                       <span style={{ fontSize: 11, color: "#bbb" }}>{timeAgo(r.created_at)}</span>
                                     </div>
                                     <p style={{ fontSize: 13, color: "#333", margin: "0 0 6px", lineHeight: 1.5, wordBreak: "break-word" }}>{r.body}</p>
-                                    {/* Like on reply */}
-                                    <button onClick={() => handleLikeComment(r.id)} disabled={likingId === r.id}
-                                      style={{ display: "flex", alignItems: "center", gap: 5, background: "none", border: "none", padding: 0, cursor: "pointer", color: rLiked ? "#E11D48" : "#aaa", fontSize: 12, transition: "color 0.15s" }}>
-                                      <svg width="12" height="12" viewBox="0 0 24 24" fill={rLiked ? "#E11D48" : "none"} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                        <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
-                                      </svg>
-                                      {r.like_count > 0 && <span>{r.like_count}</span>}
-                                    </button>
+                                    {/* Like + Reply on reply */}
+                                    <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+                                      <button onClick={() => handleLikeComment(r.id)} disabled={likingId === r.id}
+                                        style={{ display: "flex", alignItems: "center", gap: 5, background: "none", border: "none", padding: 0, cursor: "pointer", color: rLiked ? "#E11D48" : "#aaa", fontSize: 12, transition: "color 0.15s" }}>
+                                        <svg width="12" height="12" viewBox="0 0 24 24" fill={rLiked ? "#E11D48" : "none"} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                          <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
+                                        </svg>
+                                        {r.like_count > 0 && <span>{r.like_count}</span>}
+                                      </button>
+                                      {user && (
+                                        <button
+                                          onClick={() => {
+                                            // Reply to a reply: open the parent's reply box, pre-fill @username of the reply author
+                                            setReplyingTo({ id: c.id, username: r.username });
+                                            setReplyBody(`@${r.username} `);
+                                            setExpandedReplies(prev => new Set([...prev, c.id]));
+                                          }}
+                                          style={{ background: "none", border: "none", padding: 0, cursor: "pointer", color: "#aaa", fontSize: 12, fontWeight: 500 }}>
+                                          Reply
+                                        </button>
+                                      )}
+                                    </div>
                                   </div>
                                   {user?.id === r.user_id && (
                                     <button className="delete-btn" onClick={() => handleDeleteComment(r.id)}
