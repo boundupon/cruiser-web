@@ -152,11 +152,13 @@ export default function ProfilePage() {
             </div>
             <div style={{ paddingBottom: 4 }}>
               <h1 style={{ fontFamily: "'Syne', sans-serif", fontSize: isMobile ? 20 : 26, fontWeight: 800, color: "white", margin: "0 0 3px", lineHeight: 1.1 }}>
-                {profile.display_name || profile.username}
+                @{profile.username}
               </h1>
-              <div style={{ fontSize: 13, color: "rgba(255,255,255,0.5)" }}>
-                @{profile.username}{profile.city ? ` · ${[profile.city, profile.state].filter(Boolean).join(", ")}` : ""}
-              </div>
+              {profile.city && (
+                <div style={{ fontSize: 13, color: "rgba(255,255,255,0.5)" }}>
+                  {[profile.city, profile.state].filter(Boolean).join(", ")}
+                </div>
+              )}
             </div>
           </div>
           {!isOwner && (
