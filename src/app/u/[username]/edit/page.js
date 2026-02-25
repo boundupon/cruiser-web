@@ -23,7 +23,6 @@ export default function EditProfilePage() {
   const [activeTab, setActiveTab] = useState("profile");
 
   // Profile fields
-  const [displayName, setDisplayName] = useState("");
   const [usernameField, setUsernameField] = useState("");
   const [city, setCity] = useState("");
   const [stateField, setStateField] = useState("");
@@ -78,7 +77,6 @@ export default function EditProfilePage() {
       if (res.ok) {
         const p = await res.json();
         if (p) {
-          setDisplayName(p.display_name || "");
           setUsernameField(p.username || "");
           setCity(p.city || "");
           setStateField(p.state || "");
@@ -159,7 +157,7 @@ export default function EditProfilePage() {
       const res = await fetch(`${API_BASE}/profile`, {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ username: usernameField, display_name: displayName, city, state: stateField, bio, social_links: socialLinks, profile_photo_url: profilePhotoUrl, banner_image_url: bannerUrl }),
+        body: JSON.stringify({ username: usernameField, city, state: stateField, bio, social_links: socialLinks, profile_photo_url: profilePhotoUrl, banner_image_url: bannerUrl }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Save failed");
@@ -346,7 +344,6 @@ export default function EditProfilePage() {
             </div>
 
             <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 14, marginBottom: 14 }}>
-              <div><label style={lbl}>Display Name</label><input value={displayName} onChange={(e) => setDisplayName(e.target.value)} placeholder="Your name" style={inp} /></div>
               <div>
                 <label style={lbl}>Username *</label>
                 <input required value={usernameField} onChange={(e) => setUsernameField(e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, ""))} placeholder="e.g. shadowhollow" style={inp} maxLength={30} />
