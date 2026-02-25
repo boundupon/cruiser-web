@@ -45,8 +45,6 @@ function HomeInner() {
   const searchParams = useSearchParams();
   const [user, setUser] = useState(null);
   const [profileUsername, setProfileUsername] = useState(null);
-  const [profileDisplayName, setProfileDisplayName] = useState(null);
-  const [profilePhotoUrl, setProfilePhotoUrl] = useState(null);
   const [favoriteIds, setFavoriteIds] = useState(new Set());
   const [togglingFavId, setTogglingFavId] = useState(null);
   const [showAuth, setShowAuth] = useState(false);
@@ -141,8 +139,6 @@ function HomeInner() {
         loadFavoriteIds(session.access_token);
       } else {
         setProfileUsername(null);
-        setProfileDisplayName(null);
-        setProfilePhotoUrl(null);
         setFavoriteIds(new Set());
       }
     });
@@ -214,8 +210,6 @@ function HomeInner() {
       if (res.ok) {
         const p = await res.json();
         if (p?.username) setProfileUsername(p.username);
-        if (p?.display_name) setProfileDisplayName(p.display_name);
-        if (p?.profile_photo_url) setProfilePhotoUrl(p.profile_photo_url);
       }
     } catch (e) { /* silent */ }
   }
@@ -567,20 +561,17 @@ function HomeInner() {
               <>
                 {user && (
                   <a href="/saved" style={{ fontSize: 14, color: "#888", textDecoration: "none", display: "flex", alignItems: "center", gap: 5 }}>
-                    ❤️ Saved
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="#E11D48" stroke="#E11D48" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg>
+                    Saved
                   </a>
-                )}
+                }}
                 {profileUsername ? (
                   <a href={`/u/${profileUsername}`}
-                    style={{ display: "flex", alignItems: "center", gap: 8, textDecoration: "none", background: "none", border: "1.5px solid #E0E0DC", borderRadius: 8, padding: "7px 10px", fontSize: 13, color: "#333", cursor: "pointer" }}>
-                    {profilePhotoUrl ? (
-                      <img src={profilePhotoUrl} alt="" style={{ width: 26, height: 26, borderRadius: "50%", objectFit: "cover", flexShrink: 0 }} />
-                    ) : (
-                      <div style={{ width: 26, height: 26, borderRadius: "50%", background: "#1a1a1a", display: "grid", placeItems: "center", color: "white", fontSize: 11, fontWeight: 700, flexShrink: 0 }}>
-                        {(profileDisplayName || profileUsername)[0].toUpperCase()}
-                      </div>
-                    )}
-                    {profileDisplayName || profileUsername}
+                    style={{ display: "flex", alignItems: "center", gap: 8, textDecoration: "none", background: "none", border: "1.5px solid #E0E0DC", borderRadius: 8, padding: "7px 14px", fontSize: 13, color: "#555", cursor: "pointer" }}>
+                    <div style={{ width: 22, height: 22, borderRadius: "50%", background: "#1a1a1a", display: "grid", placeItems: "center", color: "white", fontSize: 10, fontWeight: 700, flexShrink: 0 }}>
+                      {profileUsername[0].toUpperCase()}
+                    </div>
+                    {profileUsername}
                   </a>
                 ) : (
                   <a href="/profile/setup"
@@ -637,15 +628,16 @@ function HomeInner() {
               <>
                 {user && (
                   <a href="/saved" style={{ fontSize: 14, color: "#888", textDecoration: "none", display: "flex", alignItems: "center", gap: 5 }}>
-                    ❤️ Saved
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="#E11D48" stroke="#E11D48" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg>
+                    Saved
                   </a>
-                )}
+                }}
                 {profileUsername ? (
                   <a href={`/u/${profileUsername}`} onClick={() => setMenuOpen(false)}>👤 My Profile</a>
                 ) : (
                   <a href="/profile/setup" onClick={() => setMenuOpen(false)}>Set up profile</a>
                 )}
-                <a href="/saved" onClick={() => setMenuOpen(false)}>❤️ Saved Meets</a>
+                <a href="/saved" onClick={() => setMenuOpen(false)}>Saved Meets</a>
                 <span style={{ fontSize: 13, color: "#888", padding: "14px 0", borderBottom: "1px solid #F0EFEB" }}>{user.email?.split("@")[0]}</span>
                 <button onClick={() => { supabase.auth.signOut(); setMenuOpen(false); }}>Sign out</button>
               </>
@@ -955,25 +947,9 @@ function HomeInner() {
               const fallback = gradients[m.event_type] || "linear-gradient(135deg, #1a1a1a, #444)";
               return (
               <article key={m.id} className="meet-card"
-                style={{ background: "white", border: "1.5px solid #E8E8E4", borderRadius: 12, overflow: "hidden", cursor: "pointer", position: "relative" }}>
+                style={{ background: "white", border: "1.5px solid #E8E8E4", borderRadius: 12, overflow: "hidden", cursor: "pointer" }}>
                 {/* Heart / Save button */}
-                <button
-                  onClick={(e) => handleToggleFavorite(e, m.id)}
-                  disabled={togglingFavId === m.id}
-                  title={favoriteIds.has(m.id) ? "Remove from saved" : "Save meet"}
-                  style={{
-                    position: "absolute", top: 10, right: 10, zIndex: 10,
-                    background: "rgba(255,255,255,0.92)", border: "none", borderRadius: "50%",
-                    width: 34, height: 34, display: "flex", alignItems: "center", justifyContent: "center",
-                    cursor: togglingFavId === m.id ? "not-allowed" : "pointer",
-                    fontSize: 16, boxShadow: "0 1px 4px rgba(0,0,0,0.12)",
-                    opacity: togglingFavId === m.id ? 0.5 : 1, transition: "transform 0.15s",
-                  }}
-                  onMouseEnter={e => e.currentTarget.style.transform = "scale(1.15)"}
-                  onMouseLeave={e => e.currentTarget.style.transform = "scale(1)"}
-                >
-                  {favoriteIds.has(m.id) ? "❤️" : "🤍"}
-                </button>
+
                 {/* Banner */}
                 <div style={{
                   height: 160,
@@ -992,10 +968,32 @@ function HomeInner() {
                   <p style={{ fontSize: 13, color: "#888", margin: "0 0 16px" }}>&#128205; {m.city || "Location TBD"}</p>
                   <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", borderTop: "1px solid #F0EFEB", paddingTop: 14 }}>
                     <span style={{ fontSize: 13, color: "#888" }}>by {m.host_name || "Anonymous"}</span>
-                    <a href={`/meets/${m.id}`}
-                      style={{ fontSize: 13, fontWeight: 600, color: "#1a1a1a", textDecoration: "none" }}>
-                      Details
-                    </a>
+                    <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+                      <button
+                        onClick={(e) => handleToggleFavorite(e, m.id)}
+                        disabled={togglingFavId === m.id}
+                        title={favoriteIds.has(m.id) ? "Remove from saved" : "Save meet"}
+                        style={{
+                          background: "none", border: "none", padding: 0,
+                          cursor: togglingFavId === m.id ? "not-allowed" : "pointer",
+                          display: "flex", alignItems: "center",
+                          opacity: togglingFavId === m.id ? 0.5 : 1,
+                          transition: "transform 0.15s",
+                        }}
+                        onMouseEnter={e => e.currentTarget.style.transform = "scale(1.2)"}
+                        onMouseLeave={e => e.currentTarget.style.transform = "scale(1)"}
+                      >
+                        {favoriteIds.has(m.id) ? (
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="#E11D48" stroke="#E11D48" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg>
+                        ) : (
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#bbb" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg>
+                        )}
+                      </button>
+                      <a href={`/meets/${m.id}`}
+                        style={{ fontSize: 13, fontWeight: 600, color: "#1a1a1a", textDecoration: "none" }}>
+                        Details
+                      </a>
+                    </div>
                   </div>
                 </div>
               </article>
