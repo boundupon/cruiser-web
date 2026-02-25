@@ -45,7 +45,6 @@ function HomeInner() {
   const searchParams = useSearchParams();
   const [user, setUser] = useState(null);
   const [profileUsername, setProfileUsername] = useState(null);
-  const [profileDisplayName, setProfileDisplayName] = useState(null);
   const [profilePhotoUrl, setProfilePhotoUrl] = useState(null);
   const [favoriteIds, setFavoriteIds] = useState(new Set());
   const [togglingFavId, setTogglingFavId] = useState(null);
@@ -212,7 +211,6 @@ function HomeInner() {
       if (res.ok) {
         const p = await res.json();
         if (p?.username) setProfileUsername(p.username);
-        if (p?.display_name) setProfileDisplayName(p.display_name);
         if (p?.profile_photo_url) setProfilePhotoUrl(p.profile_photo_url);
       }
     } catch (e) { /* silent */ }
@@ -576,10 +574,10 @@ function HomeInner() {
                       <img src={profilePhotoUrl} alt="" style={{ width: 20, height: 20, borderRadius: "50%", objectFit: "cover", flexShrink: 0 }} />
                     ) : (
                       <div style={{ width: 20, height: 20, borderRadius: "50%", background: "#1a1a1a", display: "grid", placeItems: "center", color: "white", fontSize: 10, fontWeight: 700, flexShrink: 0 }}>
-                        {(profileDisplayName || profileUsername)[0].toUpperCase()}
+                        {(profileUsername || "?")[0].toUpperCase()}
                       </div>
                     )}
-                    {profileDisplayName || profileUsername}
+                    {profileUsername}
                   </a>
                 ) : (
                   <a href="/profile/setup"
