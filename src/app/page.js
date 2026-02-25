@@ -45,6 +45,8 @@ function HomeInner() {
   const searchParams = useSearchParams();
   const [user, setUser] = useState(null);
   const [profileUsername, setProfileUsername] = useState(null);
+  const [profileDisplayName, setProfileDisplayName] = useState(null);
+  const [profilePhotoUrl, setProfilePhotoUrl] = useState(null);
   const [favoriteIds, setFavoriteIds] = useState(new Set());
   const [togglingFavId, setTogglingFavId] = useState(null);
   const [showAuth, setShowAuth] = useState(false);
@@ -210,6 +212,8 @@ function HomeInner() {
       if (res.ok) {
         const p = await res.json();
         if (p?.username) setProfileUsername(p.username);
+        if (p?.display_name) setProfileDisplayName(p.display_name);
+        if (p?.profile_photo_url) setProfilePhotoUrl(p.profile_photo_url);
       }
     } catch (e) { /* silent */ }
   }
@@ -567,11 +571,15 @@ function HomeInner() {
                 )}
                 {profileUsername ? (
                   <a href={`/u/${profileUsername}`}
-                    style={{ display: "flex", alignItems: "center", gap: 8, textDecoration: "none", background: "none", border: "1.5px solid #E0E0DC", borderRadius: 8, padding: "7px 14px", fontSize: 13, color: "#555", cursor: "pointer" }}>
-                    <div style={{ width: 22, height: 22, borderRadius: "50%", background: "#1a1a1a", display: "grid", placeItems: "center", color: "white", fontSize: 10, fontWeight: 700, flexShrink: 0 }}>
-                      {profileUsername[0].toUpperCase()}
-                    </div>
-                    {profileUsername}
+                    style={{ display: "flex", alignItems: "center", gap: 8, textDecoration: "none", background: "none", border: "1.5px solid #E0E0DC", borderRadius: 8, padding: "7px 10px", fontSize: 13, color: "#333", cursor: "pointer" }}>
+                    {profilePhotoUrl ? (
+                      <img src={profilePhotoUrl} alt="" style={{ width: 26, height: 26, borderRadius: "50%", objectFit: "cover", flexShrink: 0 }} />
+                    ) : (
+                      <div style={{ width: 26, height: 26, borderRadius: "50%", background: "#1a1a1a", display: "grid", placeItems: "center", color: "white", fontSize: 11, fontWeight: 700, flexShrink: 0 }}>
+                        {(profileDisplayName || profileUsername)[0].toUpperCase()}
+                      </div>
+                    )}
+                    {profileDisplayName || profileUsername}
                   </a>
                 ) : (
                   <a href="/profile/setup"
