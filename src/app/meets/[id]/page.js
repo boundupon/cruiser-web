@@ -67,6 +67,12 @@ function MeetDetailInner() {
   const [commentBody, setCommentBody] = useState("");
   const [commentSubmitting, setCommentSubmitting] = useState(false);
   const [commentError, setCommentError] = useState("");
+  const [replyingTo, setReplyingTo] = useState(null); // { id, username }
+  const [replyBody, setReplyBody] = useState("");
+  const [replySubmitting, setReplySubmitting] = useState(false);
+  const [expandedReplies, setExpandedReplies] = useState(new Set());
+  const [likedCommentIds, setLikedCommentIds] = useState(new Set());
+  const [likingId, setLikingId] = useState(null);
 
   // Share
   const [copied, setCopied] = useState(false);
@@ -135,7 +141,7 @@ function MeetDetailInner() {
     if (id) loadRsvps();
   }, [id, user]);
 
-  // Load comments
+  // Load comments + liked IDs
   useEffect(() => {
     async function loadComments() {
       const res = await fetch(`${API_BASE}/meets/${id}/comments`);
@@ -143,8 +149,16 @@ function MeetDetailInner() {
       const data = await res.json();
       setComments(Array.isArray(data) ? data : []);
     }
-    if (id) loadComments();
-  }, [id]);
+    async function loadLikedIds() {
+      const { data: { session } } = await supabase.auth.getSession();
+      const headers = session ? { Authorization: `Bearer ${session.access_token}` } : {};
+      const res = await fetch(`${API_BASE}/meets/${id}/comment-likes`, { headers });
+      if (!res.ok) return;
+      const ids = await res.json();
+      setLikedCommentIds(new Set(ids));
+    }
+    if (id) { loadComments(); loadLikedIds(); }
+  }, [id, user]);
 
   // Load favorite state
   useEffect(() => {
@@ -533,7 +547,7 @@ function MeetDetailInner() {
           {/* COMMENTS SECTION */}
           <div style={{ padding: isMobile ? "0 16px" : 0 }}>
             <h2 style={{ fontSize: 18, fontWeight: 600, margin: "0 0 20px" }}>
-              Comments <span style={{ fontSize: 14, fontWeight: 400, color: "#aaa" }}>({comments.length})</span>
+              Comments <span style={{ fontSize: 14, fontWeight: 400, color: "#aaa" }}>({comments.filter(c => !c.parent_id).length})</span>
             </h2>
 
             {/* Comment input */}
@@ -582,38 +596,147 @@ function MeetDetailInner() {
             </div>
 
             {/* Comments list */}
-            {comments.length === 0 ? (
-              <div style={{ textAlign: "center", padding: "32px 0", color: "#bbb", fontSize: 14 }}>
-                No comments yet. Be the first to say something!
-              </div>
-            ) : (
-              <div style={{ display: "flex", flexDirection: "column", gap: 1 }}>
-                {comments.map((c) => (
-                  <div key={c.id} className="comment-row"
-                    style={{ display: "flex", gap: 12, padding: "16px 0", borderBottom: "1px solid #F0EFEB", position: "relative" }}>
-                    {/* Avatar */}
-                    <div style={{ width: 36, height: 36, background: "#E8E8E4", borderRadius: "50%", display: "grid", placeItems: "center", color: "#555", fontSize: 13, fontWeight: 600, flexShrink: 0 }}>
-                      {(c.username || "?")[0].toUpperCase()}
-                    </div>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ display: "flex", alignItems: "baseline", gap: 8, marginBottom: 4 }}>
-                        <span style={{ fontSize: 13, fontWeight: 600 }}>{c.username}</span>
-                        <span style={{ fontSize: 12, color: "#bbb" }}>{timeAgo(c.created_at)}</span>
+            {(() => {
+              const topLevel = comments.filter(c => !c.parent_id);
+              const getReplies = (parentId) => comments.filter(c => c.parent_id === parentId);
+              if (topLevel.length === 0) return (
+                <div style={{ textAlign: "center", padding: "32px 0", color: "#bbb", fontSize: 14 }}>
+                  No comments yet. Be the first to say something!
+                </div>
+              );
+              return (
+                <div style={{ display: "flex", flexDirection: "column" }}>
+                  {topLevel.map((c) => {
+                    const replies = getReplies(c.id);
+                    const repliesExpanded = expandedReplies.has(c.id);
+                    const isLiked = likedCommentIds.has(c.id);
+                    return (
+                      <div key={c.id} style={{ borderBottom: "1px solid #F0EFEB" }}>
+                        {/* Top-level comment */}
+                        <div className="comment-row"
+                          style={{ display: "flex", gap: 12, padding: "16px 0", position: "relative" }}>
+                          <div style={{ width: 36, height: 36, background: "#E8E8E4", borderRadius: "50%", display: "grid", placeItems: "center", color: "#555", fontSize: 13, fontWeight: 600, flexShrink: 0 }}>
+                            {(c.username || "?")[0].toUpperCase()}
+                          </div>
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{ display: "flex", alignItems: "baseline", gap: 8, marginBottom: 4 }}>
+                              <span style={{ fontSize: 13, fontWeight: 600 }}>{c.username}</span>
+                              <span style={{ fontSize: 12, color: "#bbb" }}>{timeAgo(c.created_at)}</span>
+                            </div>
+                            <p style={{ fontSize: 14, color: "#333", margin: "0 0 8px", lineHeight: 1.5, wordBreak: "break-word" }}>{c.body}</p>
+                            {/* Action row */}
+                            <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+                              {/* Like button */}
+                              <button onClick={() => handleLikeComment(c.id)} disabled={likingId === c.id}
+                                style={{ display: "flex", alignItems: "center", gap: 5, background: "none", border: "none", padding: 0, cursor: "pointer", color: isLiked ? "#E11D48" : "#aaa", fontSize: 13, transition: "color 0.15s" }}>
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill={isLiked ? "#E11D48" : "none"} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                  <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
+                                </svg>
+                                {c.like_count > 0 && <span>{c.like_count}</span>}
+                              </button>
+                              {/* Reply button */}
+                              {user && (
+                                <button onClick={() => replyingTo?.id === c.id ? setReplyingTo(null) : startReply(c)}
+                                  style={{ background: "none", border: "none", padding: 0, cursor: "pointer", color: "#aaa", fontSize: 13, fontWeight: 500 }}>
+                                  Reply
+                                </button>
+                              )}
+                              {/* View replies toggle */}
+                              {replies.length > 0 && (
+                                <button onClick={() => setExpandedReplies(prev => {
+                                  const next = new Set(prev);
+                                  next.has(c.id) ? next.delete(c.id) : next.add(c.id);
+                                  return next;
+                                })}
+                                  style={{ background: "none", border: "none", padding: 0, cursor: "pointer", color: "#666", fontSize: 13, fontWeight: 500, display: "flex", alignItems: "center", gap: 4 }}>
+                                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"
+                                    style={{ transform: repliesExpanded ? "rotate(180deg)" : "none", transition: "transform 0.2s" }}>
+                                    <polyline points="6 9 12 15 18 9"></polyline>
+                                  </svg>
+                                  {repliesExpanded ? "Hide" : `View`} {replies.length} {replies.length === 1 ? "reply" : "replies"}
+                                </button>
+                              )}
+                            </div>
+                            {/* Reply input */}
+                            {replyingTo?.id === c.id && (
+                              <div style={{ marginTop: 12, display: "flex", gap: 8, alignItems: "flex-start" }}>
+                                <div style={{ width: 28, height: 28, background: "#1a1a1a", borderRadius: "50%", display: "grid", placeItems: "center", color: "white", fontSize: 11, fontWeight: 600, flexShrink: 0 }}>
+                                  {(user?.user_metadata?.username || user?.email || "?")[0].toUpperCase()}
+                                </div>
+                                <div style={{ flex: 1 }}>
+                                  <textarea
+                                    autoFocus
+                                    value={replyBody}
+                                    onChange={e => setReplyBody(e.target.value)}
+                                    placeholder={`Reply to ${c.username}...`}
+                                    rows={2}
+                                    style={{ width: "100%", border: "1.5px solid #E8E8E4", borderRadius: 8, padding: "8px 12px", fontSize: 13, fontFamily: "inherit", resize: "none", outline: "none", boxSizing: "border-box" }}
+                                    onKeyDown={e => { if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) handleReplySubmit(c.id); }}
+                                  />
+                                  <div style={{ display: "flex", gap: 8, marginTop: 6 }}>
+                                    <button onClick={() => handleReplySubmit(c.id)} disabled={replySubmitting || !replyBody.trim()}
+                                      style={{ background: "#1a1a1a", color: "white", border: "none", borderRadius: 6, padding: "6px 14px", fontSize: 12, fontWeight: 500, cursor: replySubmitting || !replyBody.trim() ? "not-allowed" : "pointer", opacity: replySubmitting || !replyBody.trim() ? 0.5 : 1 }}>
+                                      {replySubmitting ? "Posting..." : "Reply"}
+                                    </button>
+                                    <button onClick={() => { setReplyingTo(null); setReplyBody(""); }}
+                                      style={{ background: "none", border: "none", color: "#888", fontSize: 12, cursor: "pointer", padding: "6px 8px" }}>
+                                      Cancel
+                                    </button>
+                                  </div>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                          {/* Delete button */}
+                          {user?.id === c.user_id && (
+                            <button className="delete-btn" onClick={() => handleDeleteComment(c.id)}
+                              style={{ position: "absolute", top: 16, right: 0, background: "none", border: "none", color: "#ccc", fontSize: 16, cursor: "pointer", opacity: 0, transition: "opacity 0.15s", padding: "0 4px" }}
+                              title="Delete comment">×</button>
+                          )}
+                        </div>
+
+                        {/* Replies (collapsed by default) */}
+                        {repliesExpanded && replies.length > 0 && (
+                          <div style={{ marginLeft: 48, borderLeft: "2px solid #F0EFEB", paddingLeft: 16, marginBottom: 12 }}>
+                            {replies.map(r => {
+                              const rLiked = likedCommentIds.has(r.id);
+                              return (
+                                <div key={r.id} className="comment-row"
+                                  style={{ display: "flex", gap: 10, padding: "10px 0", position: "relative", borderBottom: "1px solid #F8F7F5" }}>
+                                  <div style={{ width: 28, height: 28, background: "#E8E8E4", borderRadius: "50%", display: "grid", placeItems: "center", color: "#555", fontSize: 11, fontWeight: 600, flexShrink: 0 }}>
+                                    {(r.username || "?")[0].toUpperCase()}
+                                  </div>
+                                  <div style={{ flex: 1, minWidth: 0 }}>
+                                    <div style={{ display: "flex", alignItems: "baseline", gap: 8, marginBottom: 3 }}>
+                                      <span style={{ fontSize: 13, fontWeight: 600 }}>{r.username}</span>
+                                      <span style={{ fontSize: 11, color: "#bbb" }}>{timeAgo(r.created_at)}</span>
+                                    </div>
+                                    <p style={{ fontSize: 13, color: "#333", margin: "0 0 6px", lineHeight: 1.5, wordBreak: "break-word" }}>{r.body}</p>
+                                    {/* Like on reply */}
+                                    <button onClick={() => handleLikeComment(r.id)} disabled={likingId === r.id}
+                                      style={{ display: "flex", alignItems: "center", gap: 5, background: "none", border: "none", padding: 0, cursor: "pointer", color: rLiked ? "#E11D48" : "#aaa", fontSize: 12, transition: "color 0.15s" }}>
+                                      <svg width="12" height="12" viewBox="0 0 24 24" fill={rLiked ? "#E11D48" : "none"} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                        <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
+                                      </svg>
+                                      {r.like_count > 0 && <span>{r.like_count}</span>}
+                                    </button>
+                                  </div>
+                                  {user?.id === r.user_id && (
+                                    <button className="delete-btn" onClick={() => handleDeleteComment(r.id)}
+                                      style={{ position: "absolute", top: 10, right: 0, background: "none", border: "none", color: "#ccc", fontSize: 16, cursor: "pointer", opacity: 0, transition: "opacity 0.15s", padding: "0 4px" }}
+                                      title="Delete reply">×</button>
+                                  )}
+                                </div>
+                              );
+                            })}
+                          </div>
+                        )}
                       </div>
-                      <p style={{ fontSize: 14, color: "#333", margin: 0, lineHeight: 1.5, wordBreak: "break-word" }}>{c.body}</p>
-                    </div>
-                    {/* Delete button (own comments) */}
-                    {user?.id === c.user_id && (
-                      <button className="delete-btn" onClick={() => handleDeleteComment(c.id)}
-                        style={{ position: "absolute", top: 16, right: 0, background: "none", border: "none", color: "#ccc", fontSize: 16, cursor: "pointer", opacity: 0, transition: "opacity 0.15s", padding: "0 4px" }}
-                        title="Delete comment">
-                        ×
-                      </button>
-                    )}
-                  </div>
-                ))}
-              </div>
-            )}
+                    );
+                  })}
+                </div>
+              );
+            })()}
           </div>
         </div>
       </main>
