@@ -152,10 +152,15 @@ export default function GroupsPage() {
             <span style={{ fontWeight: 600, fontSize: 15, color: "#1a1a1a" }}>Cruiser</span>
           </button>
           <div style={{ display: "flex", gap: 10 }}>
-            {user && (
+            {user ? (
               <button onClick={() => router.push("/groups/create")}
                 style={{ background: "#1a1a1a", color: "white", border: "none", borderRadius: 8, padding: "8px 16px", fontSize: 13, fontWeight: 600, cursor: "pointer" }}>
                 + Create Group
+              </button>
+            ) : (
+              <button onClick={() => router.push("/")}
+                style={{ background: "#1a1a1a", color: "white", border: "none", borderRadius: 8, padding: "8px 16px", fontSize: 13, fontWeight: 600, cursor: "pointer" }}>
+                Sign In
               </button>
             )}
             <button onClick={() => router.push("/")}
@@ -218,10 +223,15 @@ export default function GroupsPage() {
             <div style={{ fontSize: 14, color: "#888", marginBottom: 24 }}>
               {search ? `No results for "${search}"` : "Be the first to create one."}
             </div>
-            {user && (
+            {user ? (
               <button onClick={() => router.push("/groups/create")}
                 style={{ background: "#1a1a1a", color: "white", border: "none", borderRadius: 8, padding: "10px 24px", fontSize: 14, fontWeight: 600, cursor: "pointer" }}>
                 Create a Group
+              </button>
+            ) : (
+              <button onClick={() => router.push("/")}
+                style={{ background: "#1a1a1a", color: "white", border: "none", borderRadius: 8, padding: "10px 24px", fontSize: 14, fontWeight: 600, cursor: "pointer" }}>
+                Sign In to Create a Group
               </button>
             )}
           </div>
