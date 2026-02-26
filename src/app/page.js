@@ -555,6 +555,7 @@ function HomeInner() {
             {["Events", "Submit Event", "About"].map((l) => (
               <a key={l} className="nav-link" href="#" style={{ fontSize: 14, color: "#888", textDecoration: "none", transition: "color 0.15s" }}>{l}</a>
             ))}
+            <a className="nav-link" href="/groups" style={{ fontSize: 14, color: "#888", textDecoration: "none", transition: "color 0.15s" }}>Groups</a>
           </nav>
 
           {/* Desktop auth buttons */}
@@ -562,10 +563,13 @@ function HomeInner() {
             {user ? (
               <>
                 {user && (
-                  <a href="/saved" style={{ fontSize: 14, color: "#888", textDecoration: "none", display: "flex", alignItems: "center", gap: 5 }}>
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="#E11D48" stroke="#E11D48" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg>
-                    Saved
-                  </a>
+                  <>
+                    <a href="/groups" style={{ fontSize: 14, color: "#888", textDecoration: "none" }}>Groups</a>
+                    <a href="/saved" style={{ fontSize: 14, color: "#888", textDecoration: "none", display: "flex", alignItems: "center", gap: 5 }}>
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="#E11D48" stroke="#E11D48" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg>
+                      Saved
+                    </a>
+                  </>
                 )}
                 {profileUsername ? (
                   <a href={`/u/${profileUsername}`}
@@ -629,14 +633,18 @@ function HomeInner() {
           <div className="mobile-menu">
             <a href="#" onClick={() => setMenuOpen(false)}>Events</a>
             <a href="#" onClick={() => { setMode("host"); setMenuOpen(false); }}>Submit Event</a>
+            <a href="/groups" onClick={() => setMenuOpen(false)}>Groups</a>
             <a href="#">About</a>
             {user ? (
               <>
                 {user && (
-                  <a href="/saved" style={{ fontSize: 14, color: "#888", textDecoration: "none", display: "flex", alignItems: "center", gap: 5 }}>
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="#E11D48" stroke="#E11D48" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg>
-                    Saved
-                  </a>
+                  <>
+                    <a href="/groups" style={{ fontSize: 14, color: "#888", textDecoration: "none" }}>Groups</a>
+                    <a href="/saved" style={{ fontSize: 14, color: "#888", textDecoration: "none", display: "flex", alignItems: "center", gap: 5 }}>
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="#E11D48" stroke="#E11D48" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg>
+                      Saved
+                    </a>
+                  </>
                 )}
                 {profileUsername ? (
                   <a href={`/u/${profileUsername}`} onClick={() => setMenuOpen(false)}>👤 My Profile</a>
