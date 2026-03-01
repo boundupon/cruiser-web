@@ -974,6 +974,8 @@ function MeetDetailInner() {
           )}
 
           </div>
+        </div>
+        </div>
       </main>
     </div>
   );
