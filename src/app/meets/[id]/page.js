@@ -76,6 +76,17 @@ function MeetDetailInner() {
   const [likedCommentIds, setLikedCommentIds] = useState(new Set());
   const [likingId, setLikingId] = useState(null);
 
+  // Tabs
+  const [activeTab, setActiveTab] = useState("about");
+
+  // Posts (host updates)
+  const [posts, setPosts] = useState([]);
+  const [postBody, setPostBody] = useState("");
+  const [postSubmitting, setPostSubmitting] = useState(false);
+  const [postPhotoFile, setPostPhotoFile] = useState(null);
+  const [postPhotoPreview, setPostPhotoPreview] = useState("");
+  const [postPhotoUploading, setPostPhotoUploading] = useState(false);
+
   // Share
   const [copied, setCopied] = useState(false);
 
@@ -328,7 +339,60 @@ function MeetDetailInner() {
     } finally { setLikingId(null); }
   }
 
-  function startReply(comment) {
+  // Load posts
+  useEffect(() => {
+    async function loadPosts() {
+      const res = await fetch(`${API_BASE}/meets/${id}/posts`);
+      if (!res.ok) return;
+      const data = await res.json();
+      setPosts(Array.isArray(data) ? data : []);
+    }
+    if (id) loadPosts();
+  }, [id]);
+
+  async function handlePostSubmit(e) {
+    e.preventDefault();
+    if (!postBody.trim()) return;
+    setPostSubmitting(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      let photoUrl = null;
+      if (postPhotoFile) {
+        setPostPhotoUploading(true);
+        const ext = postPhotoFile.name.split('.').pop();
+        const path = `${user.id}/post-${Date.now()}.${ext}`;
+        const { error: upErr } = await supabase.storage.from('post-media').upload(path, postPhotoFile, { upsert: true });
+        if (!upErr) {
+          const { data: urlData } = supabase.storage.from('post-media').getPublicUrl(path);
+          photoUrl = urlData.publicUrl;
+        }
+        setPostPhotoUploading(false);
+      }
+      const res = await fetch(`${API_BASE}/meets/${id}/posts`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
+        body: JSON.stringify({ body: postBody.trim(), photo_url: photoUrl }),
+      });
+      if (!res.ok) throw new Error('Failed');
+      const data = await res.json();
+      setPosts(prev => [{ ...data, username: profileUsername, profile_photo_url: profilePhotoUrl }, ...prev]);
+      setPostBody('');
+      setPostPhotoFile(null);
+      setPostPhotoPreview('');
+    } catch (e) { console.error(e); }
+    finally { setPostSubmitting(false); }
+  }
+
+  async function handleDeletePost(postId) {
+    const { data: { session } } = await supabase.auth.getSession();
+    const res = await fetch(`${API_BASE}/meets/${id}/posts/${postId}`, {
+      method: 'DELETE',
+      headers: { Authorization: `Bearer ${session.access_token}` },
+    });
+    if (res.ok) setPosts(prev => prev.filter(p => p.id !== postId));
+  }
+
+    function startReply(comment) {
     setReplyingTo({ id: comment.id, username: comment.username });
     setReplyBody(`@${comment.username} `);
   }
@@ -577,272 +641,337 @@ function MeetDetailInner() {
             </div>
           </div>
 
-          {/* DIVIDER */}
-          <div style={{ borderTop: "1px solid #ECEAE6", marginBottom: 32, margin: isMobile ? "0 16px 32px" : "0 0 32px" }} />
 
-          {/* MAP SECTION */}
-          <div style={{ marginBottom: 40, padding: isMobile ? "0 16px" : 0 }}>
-            <h2 style={{ fontSize: 18, fontWeight: 600, margin: "0 0 16px" }}>Location</h2>
-            <div style={{ borderRadius: 12, overflow: "hidden", border: "1.5px solid #E8E8E4", position: "relative", background: "#f0efeb" }}>
-              {mapCoords ? (
-                <iframe
-                  title="Meet location map"
-                  width="100%"
-                  height={isMobile ? 240 : 340}
-                  frameBorder="0"
-                  scrolling="no"
-                  src={`https://www.openstreetmap.org/export/embed.html?bbox=${mapCoords.lon - 0.01},${mapCoords.lat - 0.007},${mapCoords.lon + 0.01},${mapCoords.lat + 0.007}&layer=mapnik&marker=${mapCoords.lat},${mapCoords.lon}`}
-                  style={{ display: "block" }}
-                />
-              ) : (
-                <div style={{ height: isMobile ? 240 : 340, display: "flex", alignItems: "center", justifyContent: "center", color: "#aaa", fontSize: 14 }}>
-                  Loading map...
-                </div>
-              )}
-              <a href={mapsUrl} target="_blank" rel="noreferrer"
-                style={{
-                  position: "absolute", bottom: 12, right: 12,
-                  background: "white", border: "1.5px solid #E8E8E4",
-                  borderRadius: 8, padding: "7px 14px", fontSize: 12,
-                  fontWeight: 500, color: "#1a1a1a", textDecoration: "none",
-                  boxShadow: "0 2px 8px rgba(0,0,0,0.08)",
-                }}>
-                Open in Google Maps ↗
-              </a>
-            </div>
-            <div style={{ fontSize: 13, color: "#888", marginTop: 8 }}>
-              📍 {[meet.location, meet.city].filter(Boolean).join(", ")}
+          {/* TABS */}
+          <div style={{ borderBottom: "1px solid #ECEAE6", padding: isMobile ? "0 16px" : "0", marginTop: 24, background: "white", position: "sticky", top: 60, zIndex: 10 }}>
+            <div style={{ maxWidth: 860, margin: "0 auto", display: "flex", gap: 0 }}>
+              {[
+                { id: "about", label: "About" },
+                { id: "discussion", label: `Discussion${comments.filter(c => !c.parent_id).length > 0 ? ` (${comments.filter(c => !c.parent_id).length})` : ""}` },
+                { id: "posts", label: `Posts${posts.length > 0 ? ` (${posts.length})` : ""}` },
+              ].map(tab => (
+                <button key={tab.id} onClick={() => setActiveTab(tab.id)}
+                  style={{
+                    background: "none", border: "none", padding: "14px 18px", fontSize: 14,
+                    fontWeight: activeTab === tab.id ? 700 : 400,
+                    color: activeTab === tab.id ? "#1a1a1a" : "#aaa",
+                    cursor: "pointer",
+                    borderBottom: `2px solid ${activeTab === tab.id ? "#1a1a1a" : "transparent"}`,
+                    marginBottom: -1, fontFamily: "inherit", whiteSpace: "nowrap",
+                  }}>
+                  {tab.label}
+                </button>
+              ))}
             </div>
           </div>
 
-          {/* DIVIDER */}
-          <div style={{ borderTop: "1px solid #ECEAE6", marginBottom: 32 }} />
+          {/* TAB: ABOUT */}
+          {activeTab === "about" && (
+            <div style={{ padding: isMobile ? "24px 16px" : "24px 0" }}>
+              {/* MAP */}
+              <div style={{ marginBottom: 24 }}>
+                <h2 style={{ fontSize: 16, fontWeight: 600, margin: "0 0 14px", color: "#1a1a1a" }}>Location</h2>
+                <div style={{ borderRadius: 12, overflow: "hidden", border: "1.5px solid #E8E8E4", position: "relative", background: "#f0efeb" }}>
+                  {mapCoords ? (
+                    <iframe
+                      title="Meet location map"
+                      width="100%"
+                      height={isMobile ? 240 : 320}
+                      frameBorder="0"
+                      scrolling="no"
+                      src={`https://www.openstreetmap.org/export/embed.html?bbox=${mapCoords.lon - 0.01},${mapCoords.lat - 0.007},${mapCoords.lon + 0.01},${mapCoords.lat + 0.007}&layer=mapnik&marker=${mapCoords.lat},${mapCoords.lon}`}
+                      style={{ display: "block" }}
+                    />
+                  ) : (
+                    <div style={{ height: 240, display: "flex", alignItems: "center", justifyContent: "center", color: "#aaa", fontSize: 14 }}>
+                      Loading map...
+                    </div>
+                  )}
+                  <a href={mapsUrl} target="_blank" rel="noreferrer"
+                    style={{ position: "absolute", bottom: 12, right: 12, background: "white", border: "1.5px solid #E8E8E4", borderRadius: 8, padding: "7px 14px", fontSize: 12, fontWeight: 500, color: "#1a1a1a", textDecoration: "none", boxShadow: "0 2px 8px rgba(0,0,0,0.08)" }}>
+                    Open in Google Maps ↗
+                  </a>
+                </div>
+                <div style={{ fontSize: 13, color: "#888", marginTop: 8 }}>
+                  📍 {[meet.location, meet.city].filter(Boolean).join(", ")}
+                </div>
+              </div>
+            </div>
+          )}
 
-          {/* COMMENTS SECTION */}
-          <div style={{ padding: isMobile ? "0 16px" : 0 }}>
-            <h2 style={{ fontSize: 18, fontWeight: 600, margin: "0 0 20px" }}>
-              Comments <span style={{ fontSize: 14, fontWeight: 400, color: "#aaa" }}>({comments.filter(c => !c.parent_id).length})</span>
-            </h2>
+          {/* TAB: DISCUSSION */}
+          {activeTab === "discussion" && (
+            <div style={{ padding: isMobile ? "24px 16px" : "24px 0" }}>
+              {/* Comment input */}
+              <div style={{ marginBottom: 28 }}>
+                {user ? (
+                  <form onSubmit={handleCommentSubmit}>
+                    <div style={{ display: "flex", gap: 10, alignItems: "flex-start" }}>
+                      {profilePhotoUrl ? (
+                        <img src={profilePhotoUrl} alt="" style={{ width: 36, height: 36, borderRadius: "50%", objectFit: "cover", flexShrink: 0 }} />
+                      ) : (
+                        <div style={{ width: 36, height: 36, background: "#1a1a1a", borderRadius: "50%", display: "grid", placeItems: "center", color: "white", fontSize: 13, fontWeight: 600, flexShrink: 0 }}>
+                          {(profileUsername || user.email || "?")[0].toUpperCase()}
+                        </div>
+                      )}
+                      <div style={{ flex: 1 }}>
+                        <textarea
+                          value={commentBody}
+                          onChange={(e) => setCommentBody(e.target.value)}
+                          placeholder="Ask a question or leave a comment..."
+                          rows={3}
+                          style={{ ...inp, resize: "vertical", marginBottom: 8 }}
+                        />
+                        {commentError && <div style={{ fontSize: 13, color: "#991B1B", marginBottom: 8 }}>{commentError}</div>}
+                        <button type="submit" disabled={commentSubmitting || !commentBody.trim()}
+                          style={{ background: "#1a1a1a", color: "white", border: "none", borderRadius: 8, padding: "9px 20px", fontSize: 13, fontWeight: 500, cursor: commentSubmitting || !commentBody.trim() ? "not-allowed" : "pointer", opacity: commentSubmitting || !commentBody.trim() ? 0.5 : 1 }}>
+                          {commentSubmitting ? "Posting..." : "Post Comment"}
+                        </button>
+                      </div>
+                    </div>
+                  </form>
+                ) : (
+                  <div style={{ background: "white", border: "1.5px solid #E8E8E4", borderRadius: 12, padding: "20px 24px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16, flexWrap: "wrap" }}>
+                    <div>
+                      <div style={{ fontSize: 14, fontWeight: 500, marginBottom: 2 }}>Join the conversation</div>
+                      <div style={{ fontSize: 13, color: "#888" }}>Sign in to ask questions or leave a comment.</div>
+                    </div>
+                    <button onClick={() => { setAuthTab("signin"); setShowAuth(true); }}
+                      style={{ background: "#1a1a1a", color: "white", border: "none", borderRadius: 8, padding: "10px 20px", fontSize: 13, fontWeight: 500, cursor: "pointer", whiteSpace: "nowrap" }}>
+                      Sign in
+                    </button>
+                  </div>
+                )}
+              </div>
 
-            {/* Comment input */}
-            <div style={{ marginBottom: 28 }}>
-              {user ? (
-                <form onSubmit={handleCommentSubmit}>
-                  <div style={{ display: "flex", gap: 10, alignItems: "flex-start" }}>
-                    {profilePhotoUrl ? (
-                      <img src={profilePhotoUrl} alt="" style={{ width: 36, height: 36, borderRadius: "50%", objectFit: "cover", flexShrink: 0 }} />
-                    ) : (
-                      <div style={{ width: 36, height: 36, background: "#1a1a1a", borderRadius: "50%", display: "grid", placeItems: "center", color: "white", fontSize: 13, fontWeight: 600, flexShrink: 0 }}>
-                        {(profileUsername || user.email || "?")[0].toUpperCase()}
+              {/* Comments list */}
+              {(() => {
+                const topLevel = comments.filter(c => !c.parent_id);
+                const getReplies = (parentId) => comments.filter(c => c.parent_id === parentId);
+                if (topLevel.length === 0) return (
+                  <div style={{ textAlign: "center", padding: "32px 0", color: "#bbb", fontSize: 14 }}>
+                    No comments yet. Be the first to say something!
+                  </div>
+                );
+                return (
+                  <div style={{ display: "flex", flexDirection: "column" }}>
+                    {topLevel.map((c) => {
+                      const replies = getReplies(c.id);
+                      const repliesExpanded = expandedReplies.has(c.id);
+                      const isLiked = likedCommentIds.has(c.id);
+                      return (
+                        <div key={c.id} style={{ borderBottom: "1px solid #F0EFEB" }}>
+                          <div className="comment-row"
+                            style={{ display: "flex", gap: 12, padding: "16px 0", position: "relative" }}>
+                            {c.profile_photo_url ? (
+                              <img src={c.profile_photo_url} alt="" style={{ width: 36, height: 36, borderRadius: "50%", objectFit: "cover", flexShrink: 0 }} />
+                            ) : (
+                              <div style={{ width: 36, height: 36, background: "#E8E8E4", borderRadius: "50%", display: "grid", placeItems: "center", color: "#555", fontSize: 13, fontWeight: 600, flexShrink: 0 }}>
+                                {(c.username || "?")[0].toUpperCase()}
+                              </div>
+                            )}
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                              <div style={{ display: "flex", alignItems: "baseline", gap: 8, marginBottom: 4 }}>
+                                <span style={{ fontSize: 13, fontWeight: 600 }}>{c.username}</span>
+                                <span style={{ fontSize: 12, color: "#bbb" }}>{timeAgo(c.created_at)}</span>
+                              </div>
+                              <p style={{ fontSize: 14, color: "#333", margin: "0 0 8px", lineHeight: 1.5, wordBreak: "break-word" }}>{c.body}</p>
+                              <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+                                <button onClick={() => handleLikeComment(c.id)} disabled={likingId === c.id}
+                                  style={{ display: "flex", alignItems: "center", gap: 5, background: "none", border: "none", padding: 0, cursor: "pointer", color: isLiked ? "#E11D48" : "#aaa", fontSize: 13, transition: "color 0.15s" }}>
+                                  <svg width="14" height="14" viewBox="0 0 24 24" fill={isLiked ? "#E11D48" : "none"} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                    <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
+                                  </svg>
+                                  {c.like_count > 0 && <span>{c.like_count}</span>}
+                                </button>
+                                {user && (
+                                  <button onClick={() => replyingTo?.id === c.id ? setReplyingTo(null) : startReply(c)}
+                                    style={{ background: "none", border: "none", padding: 0, cursor: "pointer", color: "#aaa", fontSize: 13, fontWeight: 500 }}>
+                                    Reply
+                                  </button>
+                                )}
+                                {replies.length > 0 && (
+                                  <button onClick={() => setExpandedReplies(prev => { const next = new Set(prev); next.has(c.id) ? next.delete(c.id) : next.add(c.id); return next; })}
+                                    style={{ background: "none", border: "none", padding: 0, cursor: "pointer", color: "#666", fontSize: 13, fontWeight: 500, display: "flex", alignItems: "center", gap: 4 }}>
+                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"
+                                      style={{ transform: repliesExpanded ? "rotate(180deg)" : "none", transition: "transform 0.2s" }}>
+                                      <polyline points="6 9 12 15 18 9"></polyline>
+                                    </svg>
+                                    {repliesExpanded ? "Hide" : "View"} {replies.length} {replies.length === 1 ? "reply" : "replies"}
+                                  </button>
+                                )}
+                              </div>
+                              {replyingTo?.id === c.id && (
+                                <div style={{ marginTop: 12, display: "flex", gap: 8, alignItems: "flex-start" }}>
+                                  {profilePhotoUrl ? (
+                                    <img src={profilePhotoUrl} alt="" style={{ width: 28, height: 28, borderRadius: "50%", objectFit: "cover", flexShrink: 0 }} />
+                                  ) : (
+                                    <div style={{ width: 28, height: 28, background: "#1a1a1a", borderRadius: "50%", display: "grid", placeItems: "center", color: "white", fontSize: 11, fontWeight: 600, flexShrink: 0 }}>
+                                      {(profileUsername || user?.email || "?")[0].toUpperCase()}
+                                    </div>
+                                  )}
+                                  <div style={{ flex: 1 }}>
+                                    <textarea autoFocus value={replyBody} onChange={e => setReplyBody(e.target.value)}
+                                      placeholder={`Reply to ${c.username}...`} rows={2}
+                                      style={{ width: "100%", border: "1.5px solid #E8E8E4", borderRadius: 8, padding: "8px 12px", fontSize: 13, fontFamily: "inherit", resize: "none", outline: "none", boxSizing: "border-box" }}
+                                      onKeyDown={e => { if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) handleReplySubmit(c.id); }} />
+                                    <div style={{ display: "flex", gap: 8, marginTop: 6 }}>
+                                      <button onClick={() => handleReplySubmit(c.id)} disabled={replySubmitting || !replyBody.trim()}
+                                        style={{ background: "#1a1a1a", color: "white", border: "none", borderRadius: 6, padding: "6px 14px", fontSize: 12, fontWeight: 500, cursor: replySubmitting || !replyBody.trim() ? "not-allowed" : "pointer", opacity: replySubmitting || !replyBody.trim() ? 0.5 : 1 }}>
+                                        {replySubmitting ? "Posting..." : "Reply"}
+                                      </button>
+                                      <button onClick={() => { setReplyingTo(null); setReplyBody(""); }}
+                                        style={{ background: "none", border: "none", color: "#888", fontSize: 12, cursor: "pointer", padding: "6px 8px" }}>
+                                        Cancel
+                                      </button>
+                                    </div>
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                            {user?.id === c.user_id && (
+                              <button className="delete-btn" onClick={() => handleDeleteComment(c.id)}
+                                style={{ position: "absolute", top: 16, right: 0, background: "none", border: "none", color: "#ccc", fontSize: 16, cursor: "pointer", opacity: 0, transition: "opacity 0.15s", padding: "0 4px" }}
+                                title="Delete comment">×</button>
+                            )}
+                          </div>
+                          {repliesExpanded && replies.length > 0 && (
+                            <div style={{ marginLeft: 48, borderLeft: "2px solid #F0EFEB", paddingLeft: 16, marginBottom: 12 }}>
+                              {replies.map(r => {
+                                const rLiked = likedCommentIds.has(r.id);
+                                return (
+                                  <div key={r.id} className="comment-row"
+                                    style={{ display: "flex", gap: 10, padding: "10px 0", position: "relative", borderBottom: "1px solid #F8F7F5" }}>
+                                    {r.profile_photo_url ? (
+                                      <img src={r.profile_photo_url} alt="" style={{ width: 28, height: 28, borderRadius: "50%", objectFit: "cover", flexShrink: 0 }} />
+                                    ) : (
+                                      <div style={{ width: 28, height: 28, background: "#E8E8E4", borderRadius: "50%", display: "grid", placeItems: "center", color: "#555", fontSize: 11, fontWeight: 600, flexShrink: 0 }}>
+                                        {(r.username || "?")[0].toUpperCase()}
+                                      </div>
+                                    )}
+                                    <div style={{ flex: 1, minWidth: 0 }}>
+                                      <div style={{ display: "flex", alignItems: "baseline", gap: 8, marginBottom: 3 }}>
+                                        <span style={{ fontSize: 13, fontWeight: 600 }}>{r.username}</span>
+                                        <span style={{ fontSize: 11, color: "#bbb" }}>{timeAgo(r.created_at)}</span>
+                                      </div>
+                                      <p style={{ fontSize: 13, color: "#333", margin: "0 0 6px", lineHeight: 1.5, wordBreak: "break-word" }}>{r.body}</p>
+                                      <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+                                        <button onClick={() => handleLikeComment(r.id)} disabled={likingId === r.id}
+                                          style={{ display: "flex", alignItems: "center", gap: 5, background: "none", border: "none", padding: 0, cursor: "pointer", color: rLiked ? "#E11D48" : "#aaa", fontSize: 12, transition: "color 0.15s" }}>
+                                          <svg width="12" height="12" viewBox="0 0 24 24" fill={rLiked ? "#E11D48" : "none"} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                            <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
+                                          </svg>
+                                          {r.like_count > 0 && <span>{r.like_count}</span>}
+                                        </button>
+                                        {user && (
+                                          <button onClick={() => { setReplyingTo({ id: c.id, username: r.username }); setReplyBody(`@${r.username} `); setExpandedReplies(prev => new Set([...prev, c.id])); }}
+                                            style={{ background: "none", border: "none", padding: 0, cursor: "pointer", color: "#aaa", fontSize: 12, fontWeight: 500 }}>
+                                            Reply
+                                          </button>
+                                        )}
+                                      </div>
+                                    </div>
+                                    {user?.id === r.user_id && (
+                                      <button className="delete-btn" onClick={() => handleDeleteComment(r.id)}
+                                        style={{ position: "absolute", top: 10, right: 0, background: "none", border: "none", color: "#ccc", fontSize: 16, cursor: "pointer", opacity: 0, transition: "opacity 0.15s", padding: "0 4px" }}
+                                        title="Delete reply">×</button>
+                                    )}
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                );
+              })()}
+            </div>
+          )}
+
+          {/* TAB: POSTS */}
+          {activeTab === "posts" && (
+            <div style={{ padding: isMobile ? "24px 16px" : "24px 0" }}>
+              {/* Host post input — only show if current user is the host */}
+              {user && meet.host_name && (profileUsername === meet.host_name || user.id === meet.user_id) && (
+                <form onSubmit={handlePostSubmit} style={{ marginBottom: 28 }}>
+                  <div style={{ background: "white", border: "1.5px solid #E8E8E4", borderRadius: 12, padding: "16px" }}>
+                    <div style={{ fontSize: 12, fontWeight: 700, color: "#1a1a1a", marginBottom: 10, textTransform: "uppercase", letterSpacing: "0.05em" }}>
+                      📌 Post an Update
+                    </div>
+                    <textarea value={postBody} onChange={e => setPostBody(e.target.value)}
+                      placeholder="Share parking info, changes, reminders..."
+                      rows={3}
+                      style={{ ...inp, resize: "vertical", marginBottom: 10 }} />
+                    {postPhotoPreview && (
+                      <div style={{ position: "relative", display: "inline-block", marginBottom: 10 }}>
+                        <img src={postPhotoPreview} alt="" style={{ width: 120, height: 80, objectFit: "cover", borderRadius: 8, border: "1.5px solid #E8E8E4" }} />
+                        <button onClick={() => { setPostPhotoFile(null); setPostPhotoPreview(""); }}
+                          style={{ position: "absolute", top: -6, right: -6, width: 20, height: 20, background: "#1a1a1a", color: "white", border: "none", borderRadius: "50%", cursor: "pointer", fontSize: 12, display: "grid", placeItems: "center" }}>×</button>
                       </div>
                     )}
-                    <div style={{ flex: 1 }}>
-                      <textarea
-                        value={commentBody}
-                        onChange={(e) => setCommentBody(e.target.value)}
-                        placeholder="Ask a question or leave a comment..."
-                        rows={3}
-                        style={{ ...inp, resize: "vertical", marginBottom: 8 }}
-                      />
-                      {commentError && (
-                        <div style={{ fontSize: 13, color: "#991B1B", marginBottom: 8 }}>{commentError}</div>
-                      )}
-                      <button type="submit" disabled={commentSubmitting || !commentBody.trim()}
-                        style={{
-                          background: "#1a1a1a", color: "white", border: "none", borderRadius: 8,
-                          padding: "9px 20px", fontSize: 13, fontWeight: 500,
-                          cursor: commentSubmitting || !commentBody.trim() ? "not-allowed" : "pointer",
-                          opacity: commentSubmitting || !commentBody.trim() ? 0.5 : 1,
-                        }}>
-                        {commentSubmitting ? "Posting..." : "Post Comment"}
+                    <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                      <button type="submit" disabled={postSubmitting || !postBody.trim()}
+                        style={{ background: "#1a1a1a", color: "white", border: "none", borderRadius: 8, padding: "9px 20px", fontSize: 13, fontWeight: 500, cursor: postSubmitting || !postBody.trim() ? "not-allowed" : "pointer", opacity: postSubmitting || !postBody.trim() ? 0.5 : 1 }}>
+                        {postSubmitting ? "Posting..." : "Post Update"}
                       </button>
+                      <label style={{ fontSize: 13, color: "#888", cursor: "pointer", display: "flex", alignItems: "center", gap: 5 }}>
+                        <input type="file" accept="image/*" style={{ display: "none" }}
+                          onChange={e => {
+                            const file = e.target.files?.[0];
+                            if (file) { setPostPhotoFile(file); setPostPhotoPreview(URL.createObjectURL(file)); }
+                          }} />
+                        📷 Add photo
+                      </label>
                     </div>
                   </div>
                 </form>
+              )}
+
+              {/* Posts list */}
+              {posts.length === 0 ? (
+                <div style={{ textAlign: "center", padding: "48px 0" }}>
+                  <div style={{ fontSize: 32, marginBottom: 12 }}>📌</div>
+                  <div style={{ fontSize: 15, fontWeight: 600, marginBottom: 6 }}>No updates yet</div>
+                  <div style={{ fontSize: 13, color: "#888" }}>The host will post parking info, reminders, and updates here.</div>
+                </div>
               ) : (
-                <div style={{ background: "white", border: "1.5px solid #E8E8E4", borderRadius: 12, padding: "20px 24px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16, flexWrap: "wrap" }}>
-                  <div>
-                    <div style={{ fontSize: 14, fontWeight: 500, marginBottom: 2 }}>Join the conversation</div>
-                    <div style={{ fontSize: 13, color: "#888" }}>Sign in to ask questions or leave a comment.</div>
-                  </div>
-                  <button onClick={() => { setAuthTab("signin"); setShowAuth(true); }}
-                    style={{ background: "#1a1a1a", color: "white", border: "none", borderRadius: 8, padding: "10px 20px", fontSize: 13, fontWeight: 500, cursor: "pointer", whiteSpace: "nowrap" }}>
-                    Sign in
-                  </button>
+                <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                  {posts.map(p => (
+                    <div key={p.id} style={{ background: "white", border: "1.5px solid #E8E8E4", borderRadius: 12, padding: "16px", position: "relative" }}>
+                      <div style={{ display: "flex", gap: 10, alignItems: "center", marginBottom: 10 }}>
+                        {p.profile_photo_url ? (
+                          <img src={p.profile_photo_url} alt="" style={{ width: 32, height: 32, borderRadius: "50%", objectFit: "cover" }} />
+                        ) : (
+                          <div style={{ width: 32, height: 32, background: "#1a1a1a", borderRadius: "50%", display: "grid", placeItems: "center", color: "white", fontSize: 12, fontWeight: 600 }}>
+                            {(p.username || "?")[0].toUpperCase()}
+                          </div>
+                        )}
+                        <div>
+                          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                            <span style={{ fontSize: 13, fontWeight: 700 }}>{p.username}</span>
+                            <span style={{ fontSize: 10, fontWeight: 700, background: "#1a1a1a", color: "white", padding: "2px 7px", borderRadius: 4, letterSpacing: "0.04em" }}>HOST</span>
+                            <span style={{ fontSize: 12, color: "#bbb" }}>{timeAgo(p.created_at)}</span>
+                          </div>
+                        </div>
+                      </div>
+                      <p style={{ fontSize: 14, color: "#333", lineHeight: 1.6, margin: 0 }}>{p.body}</p>
+                      {p.photo_url && (
+                        <img src={p.photo_url} alt="" style={{ width: "100%", borderRadius: 8, marginTop: 10, maxHeight: 300, objectFit: "cover" }} />
+                      )}
+                      {user?.id === p.user_id && (
+                        <button onClick={() => handleDeletePost(p.id)}
+                          style={{ position: "absolute", top: 14, right: 14, background: "none", border: "none", color: "#ccc", fontSize: 16, cursor: "pointer", padding: "0 4px" }}
+                          title="Delete post">×</button>
+                      )}
+                    </div>
+                  ))}
                 </div>
               )}
             </div>
+          )}
 
-            {/* Comments list */}
-            {(() => {
-              const topLevel = comments.filter(c => !c.parent_id);
-              const getReplies = (parentId) => comments.filter(c => c.parent_id === parentId);
-              if (topLevel.length === 0) return (
-                <div style={{ textAlign: "center", padding: "32px 0", color: "#bbb", fontSize: 14 }}>
-                  No comments yet. Be the first to say something!
-                </div>
-              );
-              return (
-                <div style={{ display: "flex", flexDirection: "column" }}>
-                  {topLevel.map((c) => {
-                    const replies = getReplies(c.id);
-                    const repliesExpanded = expandedReplies.has(c.id);
-                    const isLiked = likedCommentIds.has(c.id);
-                    return (
-                      <div key={c.id} style={{ borderBottom: "1px solid #F0EFEB" }}>
-                        {/* Top-level comment */}
-                        <div className="comment-row"
-                          style={{ display: "flex", gap: 12, padding: "16px 0", position: "relative" }}>
-                          {c.profile_photo_url ? (
-                            <img src={c.profile_photo_url} alt="" style={{ width: 36, height: 36, borderRadius: "50%", objectFit: "cover", flexShrink: 0 }} />
-                          ) : (
-                            <div style={{ width: 36, height: 36, background: "#E8E8E4", borderRadius: "50%", display: "grid", placeItems: "center", color: "#555", fontSize: 13, fontWeight: 600, flexShrink: 0 }}>
-                              {(c.username || "?")[0].toUpperCase()}
-                            </div>
-                          )}
-                          <div style={{ flex: 1, minWidth: 0 }}>
-                            <div style={{ display: "flex", alignItems: "baseline", gap: 8, marginBottom: 4 }}>
-                              <span style={{ fontSize: 13, fontWeight: 600 }}>{c.username}</span>
-                              <span style={{ fontSize: 12, color: "#bbb" }}>{timeAgo(c.created_at)}</span>
-                            </div>
-                            <p style={{ fontSize: 14, color: "#333", margin: "0 0 8px", lineHeight: 1.5, wordBreak: "break-word" }}>{c.body}</p>
-                            {/* Action row */}
-                            <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
-                              {/* Like button */}
-                              <button onClick={() => handleLikeComment(c.id)} disabled={likingId === c.id}
-                                style={{ display: "flex", alignItems: "center", gap: 5, background: "none", border: "none", padding: 0, cursor: "pointer", color: isLiked ? "#E11D48" : "#aaa", fontSize: 13, transition: "color 0.15s" }}>
-                                <svg width="14" height="14" viewBox="0 0 24 24" fill={isLiked ? "#E11D48" : "none"} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                  <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
-                                </svg>
-                                {c.like_count > 0 && <span>{c.like_count}</span>}
-                              </button>
-                              {/* Reply button */}
-                              {user && (
-                                <button onClick={() => replyingTo?.id === c.id ? setReplyingTo(null) : startReply(c)}
-                                  style={{ background: "none", border: "none", padding: 0, cursor: "pointer", color: "#aaa", fontSize: 13, fontWeight: 500 }}>
-                                  Reply
-                                </button>
-                              )}
-                              {/* View replies toggle */}
-                              {replies.length > 0 && (
-                                <button onClick={() => setExpandedReplies(prev => {
-                                  const next = new Set(prev);
-                                  next.has(c.id) ? next.delete(c.id) : next.add(c.id);
-                                  return next;
-                                })}
-                                  style={{ background: "none", border: "none", padding: 0, cursor: "pointer", color: "#666", fontSize: 13, fontWeight: 500, display: "flex", alignItems: "center", gap: 4 }}>
-                                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"
-                                    style={{ transform: repliesExpanded ? "rotate(180deg)" : "none", transition: "transform 0.2s" }}>
-                                    <polyline points="6 9 12 15 18 9"></polyline>
-                                  </svg>
-                                  {repliesExpanded ? "Hide" : `View`} {replies.length} {replies.length === 1 ? "reply" : "replies"}
-                                </button>
-                              )}
-                            </div>
-                            {/* Reply input */}
-                            {replyingTo?.id === c.id && (
-                              <div style={{ marginTop: 12, display: "flex", gap: 8, alignItems: "flex-start" }}>
-                                {profilePhotoUrl ? (
-                                  <img src={profilePhotoUrl} alt="" style={{ width: 28, height: 28, borderRadius: "50%", objectFit: "cover", flexShrink: 0 }} />
-                                ) : (
-                                  <div style={{ width: 28, height: 28, background: "#1a1a1a", borderRadius: "50%", display: "grid", placeItems: "center", color: "white", fontSize: 11, fontWeight: 600, flexShrink: 0 }}>
-                                    {(profileUsername || user?.email || "?")[0].toUpperCase()}
-                                  </div>
-                                )}
-                                <div style={{ flex: 1 }}>
-                                  <textarea
-                                    autoFocus
-                                    value={replyBody}
-                                    onChange={e => setReplyBody(e.target.value)}
-                                    placeholder={`Reply to ${c.username}...`}
-                                    rows={2}
-                                    style={{ width: "100%", border: "1.5px solid #E8E8E4", borderRadius: 8, padding: "8px 12px", fontSize: 13, fontFamily: "inherit", resize: "none", outline: "none", boxSizing: "border-box" }}
-                                    onKeyDown={e => { if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) handleReplySubmit(c.id); }}
-                                  />
-                                  <div style={{ display: "flex", gap: 8, marginTop: 6 }}>
-                                    <button onClick={() => handleReplySubmit(c.id)} disabled={replySubmitting || !replyBody.trim()}
-                                      style={{ background: "#1a1a1a", color: "white", border: "none", borderRadius: 6, padding: "6px 14px", fontSize: 12, fontWeight: 500, cursor: replySubmitting || !replyBody.trim() ? "not-allowed" : "pointer", opacity: replySubmitting || !replyBody.trim() ? 0.5 : 1 }}>
-                                      {replySubmitting ? "Posting..." : "Reply"}
-                                    </button>
-                                    <button onClick={() => { setReplyingTo(null); setReplyBody(""); }}
-                                      style={{ background: "none", border: "none", color: "#888", fontSize: 12, cursor: "pointer", padding: "6px 8px" }}>
-                                      Cancel
-                                    </button>
-                                  </div>
-                                </div>
-                              </div>
-                            )}
-                          </div>
-                          {/* Delete button */}
-                          {user?.id === c.user_id && (
-                            <button className="delete-btn" onClick={() => handleDeleteComment(c.id)}
-                              style={{ position: "absolute", top: 16, right: 0, background: "none", border: "none", color: "#ccc", fontSize: 16, cursor: "pointer", opacity: 0, transition: "opacity 0.15s", padding: "0 4px" }}
-                              title="Delete comment">×</button>
-                          )}
-                        </div>
-
-                        {/* Replies (collapsed by default) */}
-                        {repliesExpanded && replies.length > 0 && (
-                          <div style={{ marginLeft: 48, borderLeft: "2px solid #F0EFEB", paddingLeft: 16, marginBottom: 12 }}>
-                            {replies.map(r => {
-                              const rLiked = likedCommentIds.has(r.id);
-                              return (
-                                <div key={r.id} className="comment-row"
-                                  style={{ display: "flex", gap: 10, padding: "10px 0", position: "relative", borderBottom: "1px solid #F8F7F5" }}>
-                                  {r.profile_photo_url ? (
-                                    <img src={r.profile_photo_url} alt="" style={{ width: 28, height: 28, borderRadius: "50%", objectFit: "cover", flexShrink: 0 }} />
-                                  ) : (
-                                    <div style={{ width: 28, height: 28, background: "#E8E8E4", borderRadius: "50%", display: "grid", placeItems: "center", color: "#555", fontSize: 11, fontWeight: 600, flexShrink: 0 }}>
-                                      {(r.username || "?")[0].toUpperCase()}
-                                    </div>
-                                  )}
-                                  <div style={{ flex: 1, minWidth: 0 }}>
-                                    <div style={{ display: "flex", alignItems: "baseline", gap: 8, marginBottom: 3 }}>
-                                      <span style={{ fontSize: 13, fontWeight: 600 }}>{r.username}</span>
-                                      <span style={{ fontSize: 11, color: "#bbb" }}>{timeAgo(r.created_at)}</span>
-                                    </div>
-                                    <p style={{ fontSize: 13, color: "#333", margin: "0 0 6px", lineHeight: 1.5, wordBreak: "break-word" }}>{r.body}</p>
-                                    {/* Like + Reply on reply */}
-                                    <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-                                      <button onClick={() => handleLikeComment(r.id)} disabled={likingId === r.id}
-                                        style={{ display: "flex", alignItems: "center", gap: 5, background: "none", border: "none", padding: 0, cursor: "pointer", color: rLiked ? "#E11D48" : "#aaa", fontSize: 12, transition: "color 0.15s" }}>
-                                        <svg width="12" height="12" viewBox="0 0 24 24" fill={rLiked ? "#E11D48" : "none"} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                          <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
-                                        </svg>
-                                        {r.like_count > 0 && <span>{r.like_count}</span>}
-                                      </button>
-                                      {user && (
-                                        <button
-                                          onClick={() => {
-                                            // Reply to a reply: open the parent's reply box, pre-fill @username of the reply author
-                                            setReplyingTo({ id: c.id, username: r.username });
-                                            setReplyBody(`@${r.username} `);
-                                            setExpandedReplies(prev => new Set([...prev, c.id]));
-                                          }}
-                                          style={{ background: "none", border: "none", padding: 0, cursor: "pointer", color: "#aaa", fontSize: 12, fontWeight: 500 }}>
-                                          Reply
-                                        </button>
-                                      )}
-                                    </div>
-                                  </div>
-                                  {user?.id === r.user_id && (
-                                    <button className="delete-btn" onClick={() => handleDeleteComment(r.id)}
-                                      style={{ position: "absolute", top: 10, right: 0, background: "none", border: "none", color: "#ccc", fontSize: 16, cursor: "pointer", opacity: 0, transition: "opacity 0.15s", padding: "0 4px" }}
-                                      title="Delete reply">×</button>
-                                  )}
-                                </div>
-                              );
-                            })}
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-              );
-            })()}
-          </div>
-        </div>
       </main>
     </div>
   );
