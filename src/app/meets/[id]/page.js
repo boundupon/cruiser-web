@@ -974,8 +974,10 @@ function MeetDetailInner() {
           )}
 
           </div>
+          {/* end tab content wrapper */}
         </div>
-        </div>
+        {/* end padding div */}
+      </div>
       </main>
     </div>
   );
