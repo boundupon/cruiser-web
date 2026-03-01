@@ -40,8 +40,15 @@ export default function GroupManagePage() {
   }, []);
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => setUser(session?.user ?? null));
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_e, s) => setUser(s?.user ?? null));
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      const u = session?.user ?? null;
+      setUser(u);
+      if (!u) router.push('/groups');
+    });
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_e, s) => {
+      setUser(s?.user ?? null);
+      if (!s?.user) router.push('/groups');
+    });
     return () => subscription.unsubscribe();
   }, []);
 
@@ -104,7 +111,8 @@ export default function GroupManagePage() {
       setPending(prev => prev.filter(p => p.user_id !== userId));
       if (action === "approve") {
         const mRes = await fetch(`${API_BASE}/groups/${slug}/members`);
-        setMembers(await mRes.json());
+        const mData = await mRes.json();
+        setMembers(Array.isArray(mData) ? mData : []);
         setGroup(prev => ({ ...prev, member_count: prev.member_count + 1 }));
       }
     } catch (e) { console.error(e); }
@@ -144,8 +152,10 @@ export default function GroupManagePage() {
     if (!file) return;
     setUploading(true);
     try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const userId = session?.user?.id;
       const ext = file.name.split(".").pop();
-      const path = `${slug}-${Date.now()}.${ext}`;
+      const path = `${userId}/group-${slug}-${Date.now()}.${ext}`;
       const { error } = await supabase.storage.from(bucket).upload(path, file, { upsert: true });
       if (error) throw error;
       const { data } = supabase.storage.from(bucket).getPublicUrl(path);
