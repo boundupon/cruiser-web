@@ -642,6 +642,7 @@ function MeetDetailInner() {
           </div>
 
 
+          <div>
           {/* TABS */}
           <div style={{ borderBottom: "1px solid #ECEAE6", padding: isMobile ? "0 16px" : "0", marginTop: 24, background: "white", position: "sticky", top: 60, zIndex: 10 }}>
             <div style={{ maxWidth: 860, margin: "0 auto", display: "flex", gap: 0 }}>
@@ -972,6 +973,7 @@ function MeetDetailInner() {
             </div>
           )}
 
+          </div>
       </main>
     </div>
   );
