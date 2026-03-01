@@ -99,7 +99,8 @@ export default function GroupPage() {
         setGroup(prev => ({ ...prev, member_count: prev.member_count + 1 }));
         // Reload members
         const mRes = await fetch(`${API_BASE}/groups/${slug}/members`);
-        setMembers(await mRes.json());
+        const mData = await mRes.json();
+        setMembers(Array.isArray(mData) ? mData : []);
       }
     } catch (e) { console.error(e); }
     finally { setJoining(false); }
@@ -115,7 +116,8 @@ export default function GroupPage() {
     setMembership({ role: null, status: null });
     setGroup(prev => ({ ...prev, member_count: Math.max(0, prev.member_count - 1) }));
     const mRes = await fetch(`${API_BASE}/groups/${slug}/members`);
-    setMembers(await mRes.json());
+    const mData = await mRes.json();
+    setMembers(Array.isArray(mData) ? mData : []);
   }
 
   if (loading) return (
@@ -135,10 +137,10 @@ export default function GroupPage() {
   );
 
   const meta = TYPE_META[group.type] || TYPE_META.car_club;
-  const isOwner = membership.role === "owner";
-  const isMod = membership.role === "moderator";
-  const isActive = membership.status === "active";
-  const isPending = membership.status === "pending";
+  const isOwner = membership?.role === "owner";
+  const isMod = membership?.role === "moderator";
+  const isActive = membership?.status === "active";
+  const isPending = membership?.status === "pending";
   const canManage = isOwner || isMod;
   const owner = members.find(m => m.role === "owner");
 
