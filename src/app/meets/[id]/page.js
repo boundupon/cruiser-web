@@ -843,7 +843,7 @@ function MeetDetailInner() {
               {user && user.id === meet.user_id && (
                 <form onSubmit={handlePostSubmit} style={{ marginBottom: 28 }}>
                   <div style={{ background: "white", border: "1.5px solid #E8E8E4", borderRadius: 12, padding: "16px" }}>
-                    <div style={{ fontSize: 12, fontWeight: 700, color: "#1a1a1a", marginBottom: 10, textTransform: "uppercase", letterSpacing: "0.05em" }}>📌 Post an Update</div>
+                    <div style={{ fontSize: 12, fontWeight: 700, color: "#1a1a1a", marginBottom: 10, textTransform: "uppercase", letterSpacing: "0.05em" }}>Post an Update</div>
                     <textarea value={postBody} onChange={e => setPostBody(e.target.value)}
                       placeholder="Share parking info, changes, reminders..." rows={3}
                       style={{ ...inp, resize: "vertical", marginBottom: 10 }} />
@@ -851,7 +851,7 @@ function MeetDetailInner() {
                       <div style={{ position: "relative", display: "inline-block", marginBottom: 10 }}>
                         <img src={postPhotoPreview} alt="" style={{ width: 120, height: 80, objectFit: "cover", borderRadius: 8 }} />
                         <button type="button" onClick={() => { setPostPhotoFile(null); setPostPhotoPreview(""); }}
-                          style={{ position: "absolute", top: -6, right: -6, width: 20, height: 20, background: "#1a1a1a", color: "white", border: "none", borderRadius: "50%", cursor: "pointer", fontSize: 12, display: "grid", placeItems: "center" }}>×</button>
+                          style={{ position: "absolute", top: -6, right: -6, width: 20, height: 20, background: "#1a1a1a", color: "white", border: "none", borderRadius: "50%", cursor: "pointer", fontSize: 12, display: "grid", placeItems: "center" }}>x</button>
                       </div>
                     )}
                     <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
@@ -862,7 +862,7 @@ function MeetDetailInner() {
                       <label style={{ fontSize: 13, color: "#888", cursor: "pointer" }}>
                         <input type="file" accept="image/*" style={{ display: "none" }}
                           onChange={e => { const f = e.target.files?.[0]; if (f) { setPostPhotoFile(f); setPostPhotoPreview(URL.createObjectURL(f)); } }} />
-                        📷 Add photo
+                        Add photo
                       </label>
                     </div>
                   </div>
@@ -870,7 +870,7 @@ function MeetDetailInner() {
               )}
               {posts.length === 0 ? (
                 <div style={{ textAlign: "center", padding: "48px 0" }}>
-                  <div style={{ fontSize: 32, marginBottom: 12 }}>📌</div>
+                  <div style={{ fontSize: 32, marginBottom: 12 }}>-</div>
                   <div style={{ fontSize: 15, fontWeight: 600, marginBottom: 6 }}>No updates yet</div>
                   <div style={{ fontSize: 13, color: "#888" }}>The host will post parking info, reminders, and updates here.</div>
                 </div>
@@ -895,7 +895,7 @@ function MeetDetailInner() {
                       )}
                       {user?.id === p.user_id && (
                         <button onClick={() => handleDeletePost(p.id)}
-                          style={{ position: "absolute", top: 14, right: 14, background: "none", border: "none", color: "#ccc", fontSize: 16, cursor: "pointer" }}>×</button>
+                          style={{ position: "absolute", top: 14, right: 14, background: "none", border: "none", color: "#ccc", fontSize: 16, cursor: "pointer" }}>x</button>
                       )}
                     </div>
                   ))}
@@ -903,7 +903,6 @@ function MeetDetailInner() {
               )}
             </div>
           )}
-          </div>
         </div>
       </main>
     </div>
