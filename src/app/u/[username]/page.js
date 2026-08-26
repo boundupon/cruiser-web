@@ -49,6 +49,7 @@ export default function ProfilePage() {
   const [selectedVehicleId, setSelectedVehicleId] = useState(null);
   const [lightboxPost, setLightboxPost] = useState(null);
   const [isMobile, setIsMobile] = useState(false);
+  const [reportedKeys, setReportedKeys] = useState(new Set());
 
   useEffect(() => {
     const check = () => setIsMobile(window.innerWidth < 768);
@@ -86,6 +87,27 @@ export default function ProfilePage() {
     }
     load();
   }, [username]);
+
+  async function handleReport(contentType, contentId) {
+    if (!currentUser) { alert("Sign in to report content."); return; }
+    const key = `${contentType}:${contentId}`;
+    if (reportedKeys.has(key)) return;
+    if (!window.confirm("Report this content for review by moderators?")) return;
+    const reason = window.prompt("Optional: add a reason (or leave blank)") || null;
+    try {
+      const { error } = await supabase.from("reports").insert({
+        content_type: contentType,
+        content_id: String(contentId),
+        reporter_id: currentUser.id,
+        reason,
+      });
+      if (error) throw error;
+      setReportedKeys(prev => new Set([...prev, key]));
+    } catch (e) {
+      console.error("Report error:", e);
+      alert("Failed to submit report. Please try again.");
+    }
+  }
 
   const isOwner = currentUser && profile && currentUser.id === profile.id;
   const socialLinks = Array.isArray(profile?.social_links) ? profile.social_links : [];
@@ -280,6 +302,12 @@ export default function ProfilePage() {
                   {selectedVehicle.photo_url && (
                     <div style={{ height: 180, background: `url(${selectedVehicle.photo_url}) center/cover`, position: "relative" }}>
                       <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to top, rgba(0,0,0,0.5), transparent 60%)" }} />
+                      {!isOwner && (
+                        <button onClick={() => handleReport("vehicle_photo", selectedVehicle.id)}
+                          style={{ position: "absolute", top: 10, right: 10, background: "rgba(0,0,0,0.5)", border: "none", borderRadius: 6, padding: "5px 11px", fontSize: 11, color: "white", cursor: "pointer" }}>
+                          {reportedKeys.has(`vehicle_photo:${selectedVehicle.id}`) ? "Reported" : "Report photo"}
+                        </button>
+                      )}
                     </div>
                   )}
                   <div style={{ padding: "18px 20px", display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
@@ -384,7 +412,15 @@ export default function ProfilePage() {
             {lightboxPost.caption && <div style={{ padding: "14px 20px", fontSize: 14, color: "#444", lineHeight: 1.5 }}>{lightboxPost.caption}</div>}
             <div style={{ padding: "0 20px 16px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
               <span style={{ fontSize: 12, color: "#bbb" }}>{new Date(lightboxPost.created_at).toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" })}</span>
-              <button onClick={() => setLightboxPost(null)} style={{ background: "none", border: "1.5px solid #E8E8E4", borderRadius: 8, padding: "6px 14px", fontSize: 13, cursor: "pointer", color: "#555", fontFamily: "inherit" }}>Close</button>
+              <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+                {!isOwner && (
+                  <button onClick={() => handleReport("post", lightboxPost.id)}
+                    style={{ background: "none", border: "none", padding: 0, cursor: "pointer", color: reportedKeys.has(`post:${lightboxPost.id}`) ? "#bbb" : "#E11D48", fontSize: 13 }}>
+                    {reportedKeys.has(`post:${lightboxPost.id}`) ? "Reported" : "Report"}
+                  </button>
+                )}
+                <button onClick={() => setLightboxPost(null)} style={{ background: "none", border: "1.5px solid #E8E8E4", borderRadius: 8, padding: "6px 14px", fontSize: 13, cursor: "pointer", color: "#555", fontFamily: "inherit" }}>Close</button>
+              </div>
             </div>
           </div>
         </div>

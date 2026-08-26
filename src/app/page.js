@@ -1,12 +1,10 @@
 "use client";
 
-import { useEffect, useMemo, useState, useRef, Suspense } from "react";
-import { useSearchParams } from "next/navigation";
+import { useEffect, useMemo, useState, useRef } from "react";
 import { supabase } from "./supabaseClient";
 import AuthModal from "./AuthModal";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
-const ADMIN_SECRET = process.env.NEXT_PUBLIC_ADMIN_SECRET || "";
 
 function formatDatePretty(iso) {
   try {
@@ -42,7 +40,6 @@ async function geocodeCity(city) {
 }
 
 function HomeInner() {
-  const searchParams = useSearchParams();
   const [user, setUser] = useState(null);
   const [profileUsername, setProfileUsername] = useState(null);
   const [profilePhotoUrl, setProfilePhotoUrl] = useState(null);
@@ -53,7 +50,7 @@ function HomeInner() {
   const [meets, setMeets] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [mode, setMode] = useState(() => searchParams.get("admin") === "true" ? "admin" : "find");
+  const [mode, setMode] = useState("find");
 
   const [location, setLocation] = useState("");
   const [locationState, setLocationState] = useState("");
@@ -102,14 +99,6 @@ function HomeInner() {
 
   const PAGE_SIZE = 6;
   const [page, setPage] = useState(1);
-
-  // Admin state
-  const [adminMeets, setAdminMeets] = useState([]);
-  const [adminLoading, setAdminLoading] = useState(false);
-  const [adminError, setAdminError] = useState("");
-  const [adminPassword, setAdminPassword] = useState("");
-  const [adminAuthed, setAdminAuthed] = useState(false);
-  const [adminActionMsg, setAdminActionMsg] = useState("");
 
   // Responsive
   const [isMobile, setIsMobile] = useState(false);
@@ -336,50 +325,6 @@ function HomeInner() {
     setCommittedSearchCoords(null);
     setMode("find");
   }
-
-  async function loadAdminMeets() {
-    setAdminLoading(true);
-    setAdminError("");
-    try {
-      const res = await fetch(`${API_BASE}/admin/meets`, {
-        headers: { "x-admin-secret": ADMIN_SECRET },
-      });
-      if (!res.ok) throw new Error(`Error ${res.status}`);
-      const data = await res.json();
-      setAdminMeets(Array.isArray(data) ? data : []);
-    } catch (e) {
-      setAdminError(e?.message || "Failed to load");
-    } finally {
-      setAdminLoading(false);
-    }
-  }
-
-  async function adminUpdateStatus(id, status) {
-    try {
-      const res = await fetch(`${API_BASE}/admin/meets/${id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json", "x-admin-secret": ADMIN_SECRET },
-        body: JSON.stringify({ status }),
-      });
-      if (!res.ok) throw new Error("Failed");
-      setAdminMeets((prev) => prev.filter((m) => m.id !== id));
-      setAdminActionMsg(`Meet ${status} ✓`);
-      setTimeout(() => setAdminActionMsg(""), 2500);
-    } catch {
-      setAdminError("Action failed. Try again.");
-    }
-  }
-
-  function handleAdminLogin(e) {
-    e.preventDefault();
-    if (adminPassword === ADMIN_SECRET) {
-      setAdminAuthed(true);
-      loadAdminMeets();
-    } else {
-      setAdminError("Wrong password.");
-    }
-  }
-
 
   // Address autocomplete using Nominatim
   function handleAddressInputChange(val) {
@@ -1035,82 +980,6 @@ function HomeInner() {
         </section>
       )}
 
-      {/* ADMIN PANEL */}
-      {mode === "admin" && (
-        <section style={{ maxWidth: 860, margin: "0 auto", padding: "40px 32px 64px" }}>
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 28 }}>
-            <h2 style={{ fontSize: 20, fontWeight: 600, margin: 0 }}>Admin — Pending Meets</h2>
-            {adminAuthed && (
-              <button onClick={loadAdminMeets}
-                style={{ background: "none", border: "1.5px solid #E8E8E4", borderRadius: 8, padding: "8px 16px", fontSize: 13, color: "#888", cursor: "pointer" }}>
-                Refresh
-              </button>
-            )}
-          </div>
-
-          {!adminAuthed ? (
-            <div style={{ background: "white", border: "1.5px solid #E8E8E4", borderRadius: 16, padding: 32, maxWidth: 360 }}>
-              <p style={{ fontSize: 13, color: "#888", marginTop: 0, marginBottom: 20 }}>Enter your admin password to continue.</p>
-              <form onSubmit={handleAdminLogin}>
-                <label style={lbl}>Password</label>
-                <input type="password" value={adminPassword} onChange={(e) => setAdminPassword(e.target.value)}
-                  placeholder="Admin secret" style={{ ...inp, marginBottom: 12 }} />
-                {adminError && <div style={{ fontSize: 13, color: "#991B1B", marginBottom: 10 }}>{adminError}</div>}
-                <button type="submit"
-                  style={{ background: "#1a1a1a", color: "white", border: "none", borderRadius: 8, padding: "11px 24px", fontSize: 14, fontWeight: 500, cursor: "pointer" }}>
-                  Login
-                </button>
-              </form>
-            </div>
-          ) : (
-            <div>
-              {adminActionMsg && (
-                <div style={{ background: "#F0FDF4", border: "1px solid #BBF7D0", borderRadius: 8, padding: "10px 16px", fontSize: 13, color: "#166534", marginBottom: 16 }}>
-                  {adminActionMsg}
-                </div>
-              )}
-              {adminError && (
-                <div style={{ background: "#FEF2F2", border: "1px solid #FECACA", borderRadius: 8, padding: "10px 16px", fontSize: 13, color: "#991B1B", marginBottom: 16 }}>
-                  {adminError}
-                </div>
-              )}
-              {adminLoading && <p style={{ color: "#aaa", fontSize: 14 }}>Loading...</p>}
-              {!adminLoading && adminMeets.length === 0 && (
-                <div style={{ textAlign: "center", padding: "48px 0", color: "#aaa", fontSize: 15 }}>
-                  🎉 No pending meets — all caught up!
-                </div>
-              )}
-              <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-                {adminMeets.map((m) => (
-                  <div key={m.id} style={{ background: "white", border: "1.5px solid #E8E8E4", borderRadius: 12, padding: "20px 24px", display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 16 }}>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ display: "flex", gap: 10, alignItems: "center", marginBottom: 6 }}>
-                        <span style={{ fontSize: 11, background: "#F5F5F3", color: "#777", padding: "3px 10px", borderRadius: 100 }}>{m.event_type || "Meet"}</span>
-                        <span style={{ fontSize: 12, color: "#aaa" }}>{formatDatePretty(m.date)}{m.time ? ` · ${m.time}` : ""}</span>
-                      </div>
-                      <div style={{ fontSize: 16, fontWeight: 600, marginBottom: 3 }}>{m.title || "Untitled"}</div>
-                      <div style={{ fontSize: 13, color: "#888", marginBottom: 4 }}>📍 {m.city || "—"}{m.location ? ` · ${m.location}` : ""}</div>
-                      <div style={{ fontSize: 13, color: "#888", marginBottom: m.description ? 8 : 0 }}>by {m.host_name || "Anonymous"}{m.host_contact ? ` · ${m.host_contact}` : ""}</div>
-                      {m.description && <div style={{ fontSize: 13, color: "#555", borderTop: "1px solid #F0EFEB", paddingTop: 8, marginTop: 4 }}>{m.description}</div>}
-                    </div>
-                    <div style={{ display: "flex", flexDirection: "column", gap: 8, shrink: 0 }}>
-                      <button onClick={() => adminUpdateStatus(m.id, "approved")}
-                        style={{ background: "#16A34A", color: "white", border: "none", borderRadius: 8, padding: "9px 20px", fontSize: 13, fontWeight: 500, cursor: "pointer", whiteSpace: "nowrap" }}>
-                        ✓ Approve
-                      </button>
-                      <button onClick={() => adminUpdateStatus(m.id, "rejected")}
-                        style={{ background: "white", color: "#DC2626", border: "1.5px solid #FCA5A5", borderRadius: 8, padding: "9px 20px", fontSize: 13, fontWeight: 500, cursor: "pointer", whiteSpace: "nowrap" }}>
-                        ✕ Reject
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-        </section>
-      )}
-
       {/* FOOTER */}
       <footer style={{ borderTop: "1px solid #ECEAE6", padding: 32, background: "#FAFAF9" }}>
         <div style={{ maxWidth: 1100, margin: "0 auto", display: "flex", justifyContent: "space-between", fontSize: 13, color: "#aaa" }}>
@@ -1119,6 +988,8 @@ function HomeInner() {
             {["Events", "Submit", "About"].map((l) => (
               <a key={l} href="#" style={{ color: "#aaa", textDecoration: "none" }}>{l}</a>
             ))}
+            <a href="/terms" style={{ color: "#aaa", textDecoration: "none" }}>Terms</a>
+            <a href="/privacy" style={{ color: "#aaa", textDecoration: "none" }}>Privacy</a>
           </div>
         </div>
       </footer>
@@ -1127,9 +998,5 @@ function HomeInner() {
 }
 
 export default function Home() {
-  return (
-    <Suspense fallback={null}>
-      <HomeInner />
-    </Suspense>
-  );
+  return <HomeInner />;
 }

@@ -192,7 +192,7 @@ export default function AuthModal({ onClose, onAuth, initialTab = "signin" }) {
 
         {tab === "signup" && (
           <p style={{ fontSize: 12, color: "#aaa", textAlign: "center", marginTop: 16, marginBottom: 0 }}>
-            By signing up you agree to our terms. Your account is subject to community guidelines — repeated violations will result in a ban.
+            By signing up you agree to our <a href="/terms" style={{ color: "#888" }}>Terms</a> and <a href="/privacy" style={{ color: "#888" }}>Privacy Policy</a>. Your account is subject to community guidelines — repeated violations will result in a ban.
           </p>
         )}
       </div>

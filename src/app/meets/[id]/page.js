@@ -75,6 +75,7 @@ function MeetDetailInner() {
   const [expandedReplies, setExpandedReplies] = useState(new Set());
   const [likedCommentIds, setLikedCommentIds] = useState(new Set());
   const [likingId, setLikingId] = useState(null);
+  const [reportedKeys, setReportedKeys] = useState(new Set());
 
   const [activeTab, setActiveTab] = useState("about");
   const [posts, setPosts] = useState([]);
@@ -276,6 +277,28 @@ function MeetDetailInner() {
   async function handleDeleteComment(commentId) {
     const { error } = await supabase.from("comments").delete().eq("id", commentId);
     if (!error) setComments(prev => prev.filter(c => c.id !== commentId));
+  }
+
+  async function handleReport(contentType, contentId) {
+    if (!user) { setAuthTab("signin"); setShowAuth(true); return; }
+    const key = `${contentType}:${contentId}`;
+    if (reportedKeys.has(key)) return;
+    if (!window.confirm("Report this content for review by moderators?")) return;
+    const reason = window.prompt("Optional: add a reason (or leave blank)") || null;
+    try {
+      const { error } = await supabase.from("reports").insert({
+        content_type: contentType,
+        content_id: String(contentId),
+        meet_id: id,
+        reporter_id: user.id,
+        reason,
+      });
+      if (error) throw error;
+      setReportedKeys(prev => new Set([...prev, key]));
+    } catch (e) {
+      console.error("Report error:", e);
+      alert("Failed to submit report. Please try again.");
+    }
   }
 
   async function fetchProfileData(token) {
@@ -763,6 +786,12 @@ function MeetDetailInner() {
                                     {repliesExpanded ? "Hide" : "View"} {replies.length} {replies.length === 1 ? "reply" : "replies"}
                                   </button>
                                 )}
+                                {c.user_id !== user?.id && (
+                                  <button onClick={() => handleReport("comment", c.id)}
+                                    style={{ background: "none", border: "none", padding: 0, cursor: "pointer", color: reportedKeys.has(`comment:${c.id}`) ? "#bbb" : "#ccc", fontSize: 13 }}>
+                                    {reportedKeys.has(`comment:${c.id}`) ? "Reported" : "Report"}
+                                  </button>
+                                )}
                               </div>
                               {replyingTo?.id === c.id && (
                                 <div style={{ marginTop: 12, display: "flex", gap: 8, alignItems: "flex-start" }}>
@@ -817,6 +846,12 @@ function MeetDetailInner() {
                                         {user && (
                                           <button onClick={() => { setReplyingTo({ id: c.id, username: r.username }); setReplyBody(`@${r.username} `); setExpandedReplies(prev => new Set([...prev, c.id])); }}
                                             style={{ background: "none", border: "none", padding: 0, cursor: "pointer", color: "#aaa", fontSize: 12, fontWeight: 500 }}>Reply</button>
+                                        )}
+                                        {r.user_id !== user?.id && (
+                                          <button onClick={() => handleReport("comment", r.id)}
+                                            style={{ background: "none", border: "none", padding: 0, cursor: "pointer", color: reportedKeys.has(`comment:${r.id}`) ? "#bbb" : "#ccc", fontSize: 12 }}>
+                                            {reportedKeys.has(`comment:${r.id}`) ? "Reported" : "Report"}
+                                          </button>
                                         )}
                                       </div>
                                     </div>
@@ -893,9 +928,14 @@ function MeetDetailInner() {
                       {p.photo_url && (
                         <img src={p.photo_url} alt="" style={{ width: "100%", borderRadius: 8, marginTop: 10, maxHeight: 300, objectFit: "cover" }} />
                       )}
-                      {user?.id === p.user_id && (
+                      {user?.id === p.user_id ? (
                         <button onClick={() => handleDeletePost(p.id)}
                           style={{ position: "absolute", top: 14, right: 14, background: "none", border: "none", color: "#ccc", fontSize: 16, cursor: "pointer" }}>x</button>
+                      ) : (
+                        <button onClick={() => handleReport("meet_post", p.id)}
+                          style={{ position: "absolute", top: 14, right: 14, background: "none", border: "none", color: reportedKeys.has(`meet_post:${p.id}`) ? "#bbb" : "#ccc", fontSize: 12, cursor: "pointer" }}>
+                          {reportedKeys.has(`meet_post:${p.id}`) ? "Reported" : "Report"}
+                        </button>
                       )}
                     </div>
                   ))}

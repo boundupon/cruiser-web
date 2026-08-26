@@ -50,7 +50,6 @@ export default function ProfileSetupPage() {
       setAuthLoading(false);
       const suggestion = session.user.email?.split("@")[0]?.toLowerCase().replace(/[^a-z0-9_]/g, "") || "";
       setUsername(suggestion);
-      setDisplayName(suggestion);
       const res = await fetch(`${API_BASE}/profile/me`, {
         headers: { Authorization: `Bearer ${session.access_token}` },
       });
