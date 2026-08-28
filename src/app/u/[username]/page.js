@@ -19,21 +19,6 @@ const SOCIAL_ICONS = {
   website: <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>,
 };
 
-function StarRating({ value }) {
-  return (
-    <span style={{ display: "inline-flex", gap: 1, alignItems: "center" }}>
-      {[1,2,3,4,5].map((s) => (
-        <svg key={s} width="11" height="11" viewBox="0 0 24 24"
-          fill={s <= Math.round(value) ? "#f59e0b" : "none"}
-          stroke="#f59e0b" strokeWidth="2">
-          <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
-        </svg>
-      ))}
-      <span style={{ fontSize: 12, color: "#888", marginLeft: 3 }}>{Number(value).toFixed(1)}</span>
-    </span>
-  );
-}
-
 function timeAgoShort(iso) {
   const diff = Date.now() - new Date(iso).getTime();
   const mins = Math.floor(diff / 60000);
@@ -219,6 +204,57 @@ function CommentThread({ contentType, contentId, currentUser, myUsername, myPhot
   );
 }
 
+function FollowListModal({ username, mode, onClose, router }) {
+  const [list, setList] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    fetch(`${API_BASE}/profiles/${username}/${mode}`)
+      .then(res => res.json())
+      .then(data => { if (!cancelled) setList(Array.isArray(data) ? data : []); })
+      .finally(() => { if (!cancelled) setLoading(false); });
+    return () => { cancelled = true; };
+  }, [username, mode]);
+
+  return (
+    <div onClick={onClose} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", zIndex: 200, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
+      <div onClick={(e) => e.stopPropagation()} style={{ background: "white", borderRadius: 16, width: "100%", maxWidth: 380, maxHeight: "70vh", display: "flex", flexDirection: "column", overflow: "hidden" }}>
+        <div style={{ padding: "16px 20px", borderBottom: "1px solid #F0EFEB", display: "flex", alignItems: "center", justifyContent: "space-between", flexShrink: 0 }}>
+          <div style={{ fontSize: 15, fontWeight: 700, textTransform: "capitalize" }}>{mode}</div>
+          <button onClick={onClose} style={{ background: "none", border: "none", cursor: "pointer", color: "#aaa", fontSize: 18, lineHeight: 1, padding: 4 }}>✕</button>
+        </div>
+        <div style={{ overflowY: "auto", padding: "8px 12px" }}>
+          {loading ? (
+            <div style={{ fontSize: 13, color: "#bbb", textAlign: "center", padding: "24px 0" }}>Loading...</div>
+          ) : list.length === 0 ? (
+            <div style={{ fontSize: 13, color: "#bbb", textAlign: "center", padding: "24px 0" }}>
+              {mode === "followers" ? "No followers yet." : "Not following anyone yet."}
+            </div>
+          ) : list.map((p) => (
+            <button key={p.username} onClick={() => { onClose(); router.push(`/u/${p.username}`); }}
+              style={{ display: "flex", alignItems: "center", gap: 10, width: "100%", background: "none", border: "none", padding: "8px", borderRadius: 8, cursor: "pointer", textAlign: "left", fontFamily: "inherit" }}>
+              {p.profile_photo_url
+                ? <img src={p.profile_photo_url} alt="" style={{ width: 36, height: 36, borderRadius: "50%", objectFit: "cover", flexShrink: 0 }} />
+                : <div style={{ width: 36, height: 36, background: "#E8E8E4", borderRadius: "50%", display: "grid", placeItems: "center", color: "#555", fontSize: 13, fontWeight: 600, flexShrink: 0 }}>{(p.username || "?")[0].toUpperCase()}</div>
+              }
+              <div style={{ minWidth: 0 }}>
+                <div style={{ fontSize: 13, fontWeight: 600, color: "#1a1a1a", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>@{p.username}</div>
+                {(p.city || p.display_name) && (
+                  <div style={{ fontSize: 12, color: "#aaa", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                    {p.display_name || [p.city, p.state].filter(Boolean).join(", ")}
+                  </div>
+                )}
+              </div>
+            </button>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function ProfilePage() {
   const params = useParams();
   const router = useRouter();
@@ -239,6 +275,10 @@ export default function ProfilePage() {
   const [isMobile, setIsMobile] = useState(false);
   const [reportedKeys, setReportedKeys] = useState(new Set());
   const [expandedModComments, setExpandedModComments] = useState(new Set());
+  const [isFollowing, setIsFollowing] = useState(false);
+  const [followBusy, setFollowBusy] = useState(false);
+  const [followHover, setFollowHover] = useState(false);
+  const [followListMode, setFollowListMode] = useState(null);
 
   useEffect(() => {
     const check = () => setIsMobile(window.innerWidth < 768);
@@ -284,6 +324,48 @@ export default function ProfilePage() {
     }
     load();
   }, [username]);
+
+  useEffect(() => {
+    if (!username || !currentUser) { setIsFollowing(false); return; }
+    let cancelled = false;
+    (async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) return;
+      const res = await fetch(`${API_BASE}/profiles/${username}/follow-status`, {
+        headers: { Authorization: `Bearer ${session.access_token}` },
+      });
+      if (!cancelled && res.ok) {
+        const data = await res.json();
+        setIsFollowing(!!data.following);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [username, currentUser]);
+
+  async function handleFollowToggle() {
+    if (!currentUser) { router.push(`/`); return; }
+    if (followBusy) return;
+    setFollowBusy(true);
+    const wasFollowing = isFollowing;
+    setIsFollowing(!wasFollowing);
+    setProfile(prev => prev ? { ...prev, follower_count: Math.max(0, (prev.follower_count || 0) + (wasFollowing ? -1 : 1)) } : prev);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const res = await fetch(`${API_BASE}/profiles/${username}/follow`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${session?.access_token}` },
+      });
+      if (!res.ok) throw new Error("Failed");
+      const data = await res.json();
+      setIsFollowing(!!data.following);
+    } catch (e) {
+      console.error("Follow toggle error:", e);
+      setIsFollowing(wasFollowing);
+      setProfile(prev => prev ? { ...prev, follower_count: Math.max(0, (prev.follower_count || 0) + (wasFollowing ? 1 : -1)) } : prev);
+    } finally {
+      setFollowBusy(false);
+    }
+  }
 
   async function handleReport(contentType, contentId) {
     if (!currentUser) { alert("Sign in to report content."); return; }
@@ -388,8 +470,16 @@ export default function ProfilePage() {
                   Message
                 </button>
               )}
-              <button style={{ background: "white", color: "#1a1a1a", border: "none", borderRadius: 8, padding: "9px 20px", fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>
-                Follow
+              <button onClick={handleFollowToggle} disabled={followBusy}
+                onMouseEnter={() => setFollowHover(true)} onMouseLeave={() => setFollowHover(false)}
+                style={{
+                  background: isFollowing ? (followHover ? "rgba(225,29,72,0.12)" : "rgba(255,255,255,0.12)") : "white",
+                  color: isFollowing ? (followHover ? "#E11D48" : "white") : "#1a1a1a",
+                  border: isFollowing ? (followHover ? "1.5px solid rgba(225,29,72,0.4)" : "1.5px solid rgba(255,255,255,0.3)") : "none",
+                  borderRadius: 8, padding: "9px 20px", fontSize: 13, fontWeight: 600,
+                  cursor: followBusy ? "default" : "pointer", opacity: followBusy ? 0.6 : 1, fontFamily: "inherit",
+                }}>
+                {isFollowing ? (followHover ? "Unfollow" : "Following") : "Follow"}
               </button>
             </div>
           )}
@@ -399,15 +489,15 @@ export default function ProfilePage() {
       <div style={{ maxWidth: 900, margin: "0 auto", padding: isMobile ? "0 16px 64px" : "0 40px 64px" }}>
 
         {/* STATS BAR */}
-        <div style={{ display: "grid", gridTemplateColumns: `repeat(5, 1fr)`, border: "1.5px solid #E8E8E4", borderRadius: 12, overflow: "hidden", margin: "20px 0", background: "white" }}>
+        <div style={{ display: "grid", gridTemplateColumns: `repeat(4, 1fr)`, border: "1.5px solid #E8E8E4", borderRadius: 12, overflow: "hidden", margin: "20px 0", background: "white" }}>
           {[
             { num: posts.length, label: "Posts" },
-            { num: "0", label: "Followers" },
-            { num: "0", label: "Following" },
+            { num: profile.follower_count || 0, label: "Followers", onClick: () => setFollowListMode("followers") },
+            { num: profile.following_count || 0, label: "Following", onClick: () => setFollowListMode("following") },
             { num: profile.meets_hosted_count || 0, label: "Hosted" },
-            { num: profile.host_rating ? `${Number(profile.host_rating).toFixed(1)}★` : "—", label: "Rating" },
-          ].map(({ num, label }, i) => (
-            <div key={label} style={{ padding: isMobile ? "12px 4px" : "14px 8px", textAlign: "center", borderRight: i < 4 ? "1.5px solid #E8E8E4" : "none" }}>
+          ].map(({ num, label, onClick }, i) => (
+            <div key={label} onClick={onClick}
+              style={{ padding: isMobile ? "12px 4px" : "14px 8px", textAlign: "center", borderRight: i < 3 ? "1.5px solid #E8E8E4" : "none", cursor: onClick ? "pointer" : "default" }}>
               <div style={{ fontSize: isMobile ? 14 : 18, fontWeight: 700, marginBottom: 2 }}>{num}</div>
               <div style={{ fontSize: isMobile ? 9 : 10, color: "#aaa", textTransform: "uppercase", letterSpacing: "0.07em" }}>{label}</div>
             </div>
@@ -429,18 +519,6 @@ export default function ProfilePage() {
             ))}
           </div>
         )}
-
-        {/* RATINGS */}
-        <div style={{ display: "flex", gap: 20, marginBottom: 28, flexWrap: "wrap" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 7 }}>
-            <span style={{ fontSize: 10, color: "#aaa", textTransform: "uppercase", letterSpacing: "0.07em" }}>Host</span>
-            <StarRating value={profile.host_rating || 0} />
-          </div>
-          <div style={{ display: "flex", alignItems: "center", gap: 7 }}>
-            <span style={{ fontSize: 10, color: "#aaa", textTransform: "uppercase", letterSpacing: "0.07em" }}>Attendee</span>
-            <StarRating value={profile.attendee_rating || 0} />
-          </div>
-        </div>
 
         {/* TABS */}
         <div style={{ display: "flex", borderBottom: "1px solid #ECEAE6", marginBottom: 28 }}>
@@ -592,21 +670,14 @@ export default function ProfilePage() {
                 <p style={{ fontSize: 14, color: "#444", lineHeight: 1.7, margin: 0 }}>{profile.bio}</p>
               </div>
             )}
-            <div style={{ marginBottom: 28 }}>
-              <div style={{ fontSize: 11, color: "#aaa", textTransform: "uppercase", letterSpacing: "0.08em", fontWeight: 600, marginBottom: 12 }}>Reputation</div>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-                {[
-                  { label: "Host Rating", rating: profile.host_rating, count: profile.meets_hosted_count, unit: "meets hosted" },
-                  { label: "Attendee Rating", rating: profile.attendee_rating, count: profile.meets_attended_count, unit: "meets attended" },
-                ].map(({ label, rating, count, unit }) => (
-                  <div key={label} style={{ background: "white", border: "1.5px solid #E8E8E4", borderRadius: 10, padding: "14px 16px" }}>
-                    <div style={{ fontSize: 11, color: "#aaa", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 8 }}>{label}</div>
-                    <StarRating value={rating || 0} />
-                    <div style={{ fontSize: 11, color: "#bbb", marginTop: 6 }}>{count || 0} {unit}</div>
-                  </div>
-                ))}
+            {profile.meets_hosted_count > 0 && (
+              <div style={{ marginBottom: 28 }}>
+                <div style={{ fontSize: 11, color: "#aaa", textTransform: "uppercase", letterSpacing: "0.08em", fontWeight: 600, marginBottom: 12 }}>Hosting</div>
+                <div style={{ background: "white", border: "1.5px solid #E8E8E4", borderRadius: 10, padding: "14px 16px", fontSize: 13, color: "#444" }}>
+                  {profile.meets_hosted_count} {profile.meets_hosted_count === 1 ? "meet" : "meets"} hosted
+                </div>
               </div>
-            </div>
+            )}
             {socialLinks.length > 0 && (
               <div>
                 <div style={{ fontSize: 11, color: "#aaa", textTransform: "uppercase", letterSpacing: "0.08em", fontWeight: 600, marginBottom: 12 }}>Links</div>
@@ -654,6 +725,11 @@ export default function ProfilePage() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* FOLLOWERS / FOLLOWING MODAL */}
+      {followListMode && (
+        <FollowListModal username={username} mode={followListMode} onClose={() => setFollowListMode(null)} router={router} />
       )}
     </div>
   );
