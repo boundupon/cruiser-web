@@ -21,6 +21,12 @@ export default function GroupManagePage() {
   const [actionLoading, setActionLoading] = useState(null);
   const [isMobile, setIsMobile] = useState(false);
 
+  // Meets linking
+  const [linkedMeets, setLinkedMeets] = useState([]);
+  const [meetSearch, setMeetSearch] = useState("");
+  const [allMeets, setAllMeets] = useState([]);
+  const [linkingId, setLinkingId] = useState(null);
+
   // Edit form state
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
@@ -60,20 +66,23 @@ export default function GroupManagePage() {
         const { data: { session } } = await supabase.auth.getSession();
         const headers = { Authorization: `Bearer ${session.access_token}` };
 
-        const [gRes, mRes, pRes, memRes] = await Promise.all([
+        const [gRes, mRes, pRes, memRes, meetsRes] = await Promise.all([
           fetch(`${API_BASE}/groups/${slug}`),
           fetch(`${API_BASE}/groups/${slug}/membership`, { headers }),
           fetch(`${API_BASE}/groups/${slug}/requests`, { headers }),
           fetch(`${API_BASE}/groups/${slug}/members`),
+          fetch(`${API_BASE}/groups/${slug}/meets`),
         ]);
 
         const g = await gRes.json();
         const mem = await memRes.json();
         const m = await mRes.json();
+        const linked = await meetsRes.json();
 
         setGroup(g);
         setMembership(m);
         setMembers(Array.isArray(mem) ? mem : []);
+        setLinkedMeets(Array.isArray(linked) ? linked : []);
 
         // Populate edit form
         setName(g.name || "");
@@ -148,6 +157,41 @@ export default function GroupManagePage() {
     finally { setActionLoading(null); }
   }
 
+  useEffect(() => {
+    if (activeTab !== "meets" || allMeets.length > 0) return;
+    fetch(`${API_BASE}/meets`).then(res => res.json()).then(data => setAllMeets(Array.isArray(data) ? data : [])).catch(() => {});
+  }, [activeTab]);
+
+  async function handleLinkMeet(meetId) {
+    setLinkingId(meetId);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const res = await fetch(`${API_BASE}/groups/${slug}/meets`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${session.access_token}` },
+        body: JSON.stringify({ meet_id: meetId }),
+      });
+      if (!res.ok) throw new Error("Failed");
+      const meet = allMeets.find(m => m.id === meetId);
+      if (meet) setLinkedMeets(prev => [meet, ...prev]);
+      setMeetSearch("");
+    } catch (e) { console.error(e); }
+    finally { setLinkingId(null); }
+  }
+
+  async function handleUnlinkMeet(meetId) {
+    setLinkingId(meetId);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      await fetch(`${API_BASE}/groups/${slug}/meets/${meetId}`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${session.access_token}` },
+      });
+      setLinkedMeets(prev => prev.filter(m => m.id !== meetId));
+    } catch (e) { console.error(e); }
+    finally { setLinkingId(null); }
+  }
+
   async function handleUpload(file, bucket, setUrl, setUploading) {
     if (!file) return;
     setUploading(true);
@@ -207,8 +251,14 @@ export default function GroupManagePage() {
   const tabs = [
     { id: "members", label: `Members (${members.length})` },
     { id: "requests", label: `Requests${pending.length > 0 ? ` (${pending.length})` : ""}` },
+    { id: "meets", label: `Meets (${linkedMeets.length})` },
     { id: "settings", label: "Settings" },
   ];
+
+  const linkedIds = new Set(linkedMeets.map(m => m.id));
+  const meetResults = meetSearch.trim()
+    ? allMeets.filter(m => !linkedIds.has(m.id) && (m.title || "").toLowerCase().includes(meetSearch.trim().toLowerCase()))
+    : [];
 
   return (
     <div style={{ minHeight: "100vh", background: "#FAFAF9", color: "#1a1a1a", fontFamily: "'DM Sans', -apple-system, sans-serif" }}>
@@ -331,6 +381,55 @@ export default function GroupManagePage() {
                         Deny
                       </button>
                     </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* MEETS TAB */}
+        {activeTab === "meets" && (
+          <div>
+            <div style={{ marginBottom: 24 }}>
+              <label style={lbl}>Link a meet</label>
+              <input value={meetSearch} onChange={e => setMeetSearch(e.target.value)}
+                placeholder="Search approved meets by title..." style={inp} />
+              {meetSearch.trim() && (
+                <div style={{ marginTop: 8, border: "1.5px solid #E8E8E4", borderRadius: 10, overflow: "hidden", background: "white" }}>
+                  {meetResults.length === 0 ? (
+                    <div style={{ padding: "12px 14px", fontSize: 13, color: "#aaa" }}>No matching meets found.</div>
+                  ) : meetResults.slice(0, 8).map(m => (
+                    <div key={m.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, padding: "10px 14px", borderBottom: "1px solid #F0EFEB" }}>
+                      <div style={{ minWidth: 0 }}>
+                        <div style={{ fontSize: 13, fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{m.title}</div>
+                        <div style={{ fontSize: 12, color: "#aaa" }}>{m.city}{m.date ? ` · ${new Date(m.date).toLocaleDateString(undefined, { month: "short", day: "numeric" })}` : ""}</div>
+                      </div>
+                      <button onClick={() => handleLinkMeet(m.id)} disabled={linkingId === m.id}
+                        style={{ background: "#1a1a1a", color: "white", border: "none", borderRadius: 6, padding: "6px 14px", fontSize: 12, fontWeight: 600, cursor: "pointer", flexShrink: 0, opacity: linkingId === m.id ? 0.6 : 1 }}>
+                        {linkingId === m.id ? "..." : "Link"}
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <div style={{ fontSize: 12, color: "#888", fontWeight: 500, marginBottom: 10, textTransform: "uppercase", letterSpacing: "0.05em" }}>Linked meets</div>
+            {linkedMeets.length === 0 ? (
+              <div style={{ textAlign: "center", padding: "40px 0", color: "#aaa", fontSize: 14 }}>No meets linked yet.</div>
+            ) : (
+              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                {linkedMeets.map(m => (
+                  <div key={m.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, background: "white", border: "1.5px solid #E8E8E4", borderRadius: 10, padding: "12px 16px" }}>
+                    <div style={{ minWidth: 0 }}>
+                      <div style={{ fontSize: 14, fontWeight: 600 }}>{m.title}</div>
+                      <div style={{ fontSize: 12, color: "#aaa" }}>{m.city}{m.date ? ` · ${new Date(m.date).toLocaleDateString(undefined, { month: "short", day: "numeric" })}` : ""}</div>
+                    </div>
+                    <button onClick={() => handleUnlinkMeet(m.id)} disabled={linkingId === m.id}
+                      style={{ background: "none", border: "1.5px solid #FECACA", color: "#DC2626", borderRadius: 6, padding: "6px 12px", fontSize: 12, cursor: "pointer", flexShrink: 0, opacity: linkingId === m.id ? 0.6 : 1 }}>
+                      Unlink
+                    </button>
                   </div>
                 ))}
               </div>

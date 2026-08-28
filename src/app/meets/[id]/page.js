@@ -759,13 +759,15 @@ function MeetDetailInner() {
                       return (
                         <div key={c.id} style={{ borderBottom: "1px solid #F0EFEB" }}>
                           <div className="comment-row" style={{ display: "flex", gap: 12, padding: "16px 0", position: "relative" }}>
-                            {c.profile_photo_url
-                              ? <img src={c.profile_photo_url} alt="" style={{ width: 36, height: 36, borderRadius: "50%", objectFit: "cover", flexShrink: 0 }} />
-                              : <div style={{ width: 36, height: 36, background: "#E8E8E4", borderRadius: "50%", display: "grid", placeItems: "center", color: "#555", fontSize: 13, fontWeight: 600, flexShrink: 0 }}>{(c.username||"?")[0].toUpperCase()}</div>
-                            }
+                            <button onClick={() => router.push(`/u/${c.username}`)} style={{ background: "none", border: "none", padding: 0, cursor: "pointer", flexShrink: 0 }}>
+                              {c.profile_photo_url
+                                ? <img src={c.profile_photo_url} alt="" style={{ width: 36, height: 36, borderRadius: "50%", objectFit: "cover" }} />
+                                : <div style={{ width: 36, height: 36, background: "#E8E8E4", borderRadius: "50%", display: "grid", placeItems: "center", color: "#555", fontSize: 13, fontWeight: 600 }}>{(c.username||"?")[0].toUpperCase()}</div>
+                              }
+                            </button>
                             <div style={{ flex: 1, minWidth: 0 }}>
                               <div style={{ display: "flex", alignItems: "baseline", gap: 8, marginBottom: 4 }}>
-                                <span style={{ fontSize: 13, fontWeight: 600 }}>{c.username}</span>
+                                <button onClick={() => router.push(`/u/${c.username}`)} style={{ background: "none", border: "none", padding: 0, cursor: "pointer", fontSize: 13, fontWeight: 600, color: "#1a1a1a", fontFamily: "inherit" }}>{c.username}</button>
                                 <span style={{ fontSize: 12, color: "#bbb" }}>{timeAgo(c.created_at)}</span>
                               </div>
                               <p style={{ fontSize: 14, color: "#333", margin: "0 0 8px", lineHeight: 1.5, wordBreak: "break-word" }}>{c.body}</p>
@@ -827,13 +829,15 @@ function MeetDetailInner() {
                                 const rLiked = likedCommentIds.has(r.id);
                                 return (
                                   <div key={r.id} className="comment-row" style={{ display: "flex", gap: 10, padding: "10px 0", position: "relative", borderBottom: "1px solid #F8F7F5" }}>
-                                    {r.profile_photo_url
-                                      ? <img src={r.profile_photo_url} alt="" style={{ width: 28, height: 28, borderRadius: "50%", objectFit: "cover", flexShrink: 0 }} />
-                                      : <div style={{ width: 28, height: 28, background: "#E8E8E4", borderRadius: "50%", display: "grid", placeItems: "center", color: "#555", fontSize: 11, fontWeight: 600, flexShrink: 0 }}>{(r.username||"?")[0].toUpperCase()}</div>
-                                    }
+                                    <button onClick={() => router.push(`/u/${r.username}`)} style={{ background: "none", border: "none", padding: 0, cursor: "pointer", flexShrink: 0 }}>
+                                      {r.profile_photo_url
+                                        ? <img src={r.profile_photo_url} alt="" style={{ width: 28, height: 28, borderRadius: "50%", objectFit: "cover" }} />
+                                        : <div style={{ width: 28, height: 28, background: "#E8E8E4", borderRadius: "50%", display: "grid", placeItems: "center", color: "#555", fontSize: 11, fontWeight: 600 }}>{(r.username||"?")[0].toUpperCase()}</div>
+                                      }
+                                    </button>
                                     <div style={{ flex: 1, minWidth: 0 }}>
                                       <div style={{ display: "flex", gap: 8, marginBottom: 3 }}>
-                                        <span style={{ fontSize: 13, fontWeight: 600 }}>{r.username}</span>
+                                        <button onClick={() => router.push(`/u/${r.username}`)} style={{ background: "none", border: "none", padding: 0, cursor: "pointer", fontSize: 13, fontWeight: 600, color: "#1a1a1a", fontFamily: "inherit" }}>{r.username}</button>
                                         <span style={{ fontSize: 11, color: "#bbb" }}>{timeAgo(r.created_at)}</span>
                                       </div>
                                       <p style={{ fontSize: 13, color: "#333", margin: "0 0 6px", lineHeight: 1.5, wordBreak: "break-word" }}>{r.body}</p>
@@ -914,12 +918,14 @@ function MeetDetailInner() {
                   {posts.map(p => (
                     <div key={p.id} style={{ background: "white", border: "1.5px solid #E8E8E4", borderRadius: 12, padding: "16px", position: "relative" }}>
                       <div style={{ display: "flex", gap: 10, alignItems: "center", marginBottom: 10 }}>
-                        {p.profile_photo_url
-                          ? <img src={p.profile_photo_url} alt="" style={{ width: 32, height: 32, borderRadius: "50%", objectFit: "cover" }} />
-                          : <div style={{ width: 32, height: 32, background: "#1a1a1a", borderRadius: "50%", display: "grid", placeItems: "center", color: "white", fontSize: 12, fontWeight: 600 }}>{(p.username||"?")[0].toUpperCase()}</div>
-                        }
+                        <button onClick={() => router.push(`/u/${p.username}`)} style={{ background: "none", border: "none", padding: 0, cursor: "pointer" }}>
+                          {p.profile_photo_url
+                            ? <img src={p.profile_photo_url} alt="" style={{ width: 32, height: 32, borderRadius: "50%", objectFit: "cover" }} />
+                            : <div style={{ width: 32, height: 32, background: "#1a1a1a", borderRadius: "50%", display: "grid", placeItems: "center", color: "white", fontSize: 12, fontWeight: 600 }}>{(p.username||"?")[0].toUpperCase()}</div>
+                          }
+                        </button>
                         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                          <span style={{ fontSize: 13, fontWeight: 700 }}>{p.username}</span>
+                          <button onClick={() => router.push(`/u/${p.username}`)} style={{ background: "none", border: "none", padding: 0, cursor: "pointer", fontSize: 13, fontWeight: 700, color: "#1a1a1a", fontFamily: "inherit" }}>{p.username}</button>
                           <span style={{ fontSize: 10, fontWeight: 700, background: "#1a1a1a", color: "white", padding: "2px 7px", borderRadius: 4 }}>HOST</span>
                           <span style={{ fontSize: 12, color: "#bbb" }}>{timeAgo(p.created_at)}</span>
                         </div>

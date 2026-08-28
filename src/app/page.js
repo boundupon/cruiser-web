@@ -509,6 +509,10 @@ function HomeInner() {
               <>
                 {user && (
                   <>
+                    <a href="/messages" style={{ fontSize: 14, color: "#888", textDecoration: "none", display: "flex", alignItems: "center", gap: 5 }}>
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path></svg>
+                      Messages
+                    </a>
                     <a href="/saved" style={{ fontSize: 14, color: "#888", textDecoration: "none", display: "flex", alignItems: "center", gap: 5 }}>
                       <svg width="14" height="14" viewBox="0 0 24 24" fill="#E11D48" stroke="#E11D48" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg>
                       Saved
@@ -594,6 +598,7 @@ function HomeInner() {
                 ) : (
                   <a href="/profile/setup" onClick={() => setMenuOpen(false)}>Set up profile</a>
                 )}
+                <a href="/messages" onClick={() => setMenuOpen(false)}>Messages</a>
                 <a href="/saved" onClick={() => setMenuOpen(false)}>Saved Meets</a>
                 <span style={{ fontSize: 13, color: "#888", padding: "14px 0", borderBottom: "1px solid #F0EFEB" }}>{user.email?.split("@")[0]}</span>
                 <button onClick={() => { supabase.auth.signOut(); setMenuOpen(false); }}>Sign out</button>

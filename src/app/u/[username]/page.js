@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { supabase } from "../../supabaseClient";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
@@ -36,6 +36,7 @@ function StarRating({ value }) {
 
 export default function ProfilePage() {
   const params = useParams();
+  const router = useRouter();
   const username = params?.username;
 
   const [currentUser, setCurrentUser] = useState(null);
@@ -184,9 +185,17 @@ export default function ProfilePage() {
             </div>
           </div>
           {!isOwner && (
-            <button style={{ background: "white", color: "#1a1a1a", border: "none", borderRadius: 8, padding: "9px 20px", fontSize: 13, fontWeight: 600, cursor: "pointer", flexShrink: 0, marginBottom: 4, fontFamily: "inherit" }}>
-              Follow
-            </button>
+            <div style={{ display: "flex", gap: 8, flexShrink: 0, marginBottom: 4 }}>
+              {currentUser && (
+                <button onClick={() => router.push(`/messages?to=${username}`)}
+                  style={{ background: "rgba(255,255,255,0.12)", color: "white", border: "1.5px solid rgba(255,255,255,0.3)", borderRadius: 8, padding: "9px 18px", fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>
+                  Message
+                </button>
+              )}
+              <button style={{ background: "white", color: "#1a1a1a", border: "none", borderRadius: 8, padding: "9px 20px", fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>
+                Follow
+              </button>
+            </div>
           )}
         </div>
       </div>
