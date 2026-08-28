@@ -322,7 +322,7 @@ export default function ProfilePage() {
       <div style={{ textAlign: "center" }}>
         <div style={{ fontSize: 48, marginBottom: 16 }}>🚗</div>
         <div style={{ fontSize: 20, fontWeight: 600, marginBottom: 8 }}>Profile not found</div>
-        <div style={{ color: "#888", fontSize: 14, marginBottom: 24 }}>@{username} doesn't exist on Cruiser.</div>
+        <div style={{ color: "#888", fontSize: 14, marginBottom: 24 }}>@{username} doesn't exist on Cruiser Meets.</div>
         <a href="/" style={{ background: "#1a1a1a", color: "white", borderRadius: 8, padding: "10px 24px", fontSize: 14, textDecoration: "none", fontWeight: 500 }}>Back to home</a>
       </div>
     </div>
@@ -343,8 +343,8 @@ export default function ProfilePage() {
       <header style={{ borderBottom: "1px solid #ECEAE6", background: "#FAFAF9", position: "sticky", top: 0, zIndex: 50 }}>
         <div style={{ maxWidth: 900, margin: "0 auto", padding: "0 20px", display: "flex", alignItems: "center", justifyContent: "space-between", height: 60 }}>
           <a href="/" style={{ display: "flex", alignItems: "center", gap: 10, textDecoration: "none" }}>
-            <div style={{ width: 32, height: 32, background: "#1a1a1a", borderRadius: 8, display: "grid", placeItems: "center", color: "white", fontWeight: 700, fontSize: 14 }}>C</div>
-            <span style={{ fontWeight: 600, fontSize: 15, color: "#1a1a1a" }}>Cruiser</span>
+            <img src="/logo-mark.png" alt="Cruiser Meets" style={{ height: 28, width: "auto" }} />
+            <span style={{ fontWeight: 600, fontSize: 15, color: "#1a1a1a" }}>Cruiser Meets</span>
           </a>
           {isOwner && (
             <a href={`/u/${username}/edit`} style={{ background: "#1a1a1a", color: "white", borderRadius: 8, padding: "8px 18px", fontSize: 13, fontWeight: 500, textDecoration: "none" }}>Edit Profile</a>

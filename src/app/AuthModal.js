@@ -114,8 +114,8 @@ export default function AuthModal({ onClose, onAuth, initialTab = "signin" }) {
         {/* Header */}
         <div style={{ marginBottom: 24 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 16 }}>
-            <div style={{ width: 32, height: 32, background: "#1a1a1a", borderRadius: 8, display: "grid", placeItems: "center", color: "white", fontWeight: 700, fontSize: 14 }}>C</div>
-            <span style={{ fontWeight: 600, fontSize: 15 }}>Cruiser</span>
+            <img src="/logo-mark.png" alt="Cruiser Meets" style={{ height: 28, width: "auto" }} />
+            <span style={{ fontWeight: 600, fontSize: 15 }}>Cruiser Meets</span>
           </div>
           {/* Tabs */}
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", background: "#F5F5F3", borderRadius: 8, padding: 3 }}>

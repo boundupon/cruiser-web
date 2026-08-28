@@ -97,8 +97,8 @@ export default function CreateGroupPage() {
       <header style={{ borderBottom: "1px solid #ECEAE6", background: "#FAFAF9", position: "sticky", top: 0, zIndex: 50 }}>
         <div style={{ maxWidth: 860, margin: "0 auto", padding: "0 20px", display: "flex", alignItems: "center", justifyContent: "space-between", height: 60 }}>
           <button onClick={() => router.push("/")} style={{ display: "flex", alignItems: "center", gap: 10, background: "none", border: "none", cursor: "pointer", padding: 0 }}>
-            <div style={{ width: 32, height: 32, background: "#1a1a1a", borderRadius: 8, display: "grid", placeItems: "center", color: "white", fontWeight: 700, fontSize: 14 }}>C</div>
-            <span style={{ fontWeight: 600, fontSize: 15 }}>Cruiser</span>
+            <img src="/logo-mark.png" alt="Cruiser Meets" style={{ height: 28, width: "auto" }} />
+            <span style={{ fontWeight: 600, fontSize: 15 }}>Cruiser Meets</span>
           </button>
           <button onClick={() => router.push("/groups")} style={{ background: "none", border: "1.5px solid #E0E0DC", borderRadius: 8, padding: "8px 14px", fontSize: 13, color: "#555", cursor: "pointer" }}>
             ← All Groups
@@ -109,7 +109,7 @@ export default function CreateGroupPage() {
       <main style={{ maxWidth: 620, margin: "0 auto", padding: isMobile ? "24px 16px 80px" : "48px 20px 80px" }}>
         <div style={{ marginBottom: 32 }}>
           <h1 style={{ fontFamily: "'Syne', sans-serif", fontSize: isMobile ? 26 : 32, fontWeight: 800, margin: "0 0 8px" }}>Create a Group</h1>
-          <p style={{ fontSize: 14, color: "#888", margin: 0 }}>Build your community on Cruiser.</p>
+          <p style={{ fontSize: 14, color: "#888", margin: 0 }}>Build your community on Cruiser Meets.</p>
         </div>
 
         <div style={{ display: "flex", flexDirection: "column", gap: 22 }}>

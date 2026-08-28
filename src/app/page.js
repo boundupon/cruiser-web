@@ -456,7 +456,7 @@ function HomeInner() {
     } catch (err) {
       // Surface the real error message so it's visible in the UI
       setHostError(err?.message || "Something went wrong. Please try again.");
-      console.error("[Cruiser] Host submit error:", err);
+      console.error("[Cruiser Meets] Host submit error:", err);
     } finally {
       setHostSubmitting(false);
       setHostPhotoUploading(false);
@@ -479,7 +479,7 @@ function HomeInner() {
         .meet-card { transition: all 0.18s ease; }
         .meet-card:hover { border-color: #d0d0cc !important; box-shadow: 0 4px 24px rgba(0,0,0,0.07) !important; transform: translateY(-1px); }
         .chip:hover { border-color: #1a1a1a !important; color: #1a1a1a !important; }
-        .nav-link:hover { color: #1a1a1a !important; }
+        .nav-link:hover { color: #888 !important; }
         .hamburger { display: none; background: none; border: none; cursor: pointer; padding: 4px; }
         @media (max-width: 767px) {
           .desktop-nav { display: none !important; }
@@ -496,16 +496,16 @@ function HomeInner() {
         <div style={{ maxWidth: 1100, margin: "0 auto", padding: "0 20px", display: "flex", alignItems: "center", justifyContent: "space-between", height: 60, position: "relative" }}>
           {/* Logo */}
           <button onClick={clearAll} style={{ display: "flex", alignItems: "center", gap: 10, background: "none", border: "none", cursor: "pointer", padding: 0, zIndex: 101 }}>
-            <div style={{ width: 32, height: 32, background: "#1a1a1a", borderRadius: 8, display: "grid", placeItems: "center", color: "white", fontWeight: 700, fontSize: 14 }}>C</div>
-            <span style={{ fontWeight: 600, fontSize: 15, color: "#1a1a1a" }}>Cruiser</span>
+            <img src="/logo-mark.png" alt="Cruiser Meets" style={{ height: 28, width: "auto" }} />
+            <span style={{ fontWeight: 600, fontSize: 15, color: "#1a1a1a" }}>Cruiser Meets</span>
           </button>
 
           {/* Desktop center nav */}
           <nav className="desktop-nav" style={{ display: "flex", gap: 28, position: "absolute", left: "50%", transform: "translateX(-50%)" }}>
             {["Events", "Submit Event", "About"].map((l) => (
-              <a key={l} className="nav-link" href="#" style={{ fontSize: 14, color: "#888", textDecoration: "none", transition: "color 0.15s" }}>{l}</a>
+              <a key={l} className="nav-link" href="#" style={{ fontSize: 14, color: "#1a1a1a", textDecoration: "none", transition: "color 0.15s" }}>{l}</a>
             ))}
-            <a className="nav-link" href="/groups" style={{ fontSize: 14, color: "#888", textDecoration: "none", transition: "color 0.15s" }}>Groups</a>
+            <a className="nav-link" href="/groups" style={{ fontSize: 14, color: "#1a1a1a", textDecoration: "none", transition: "color 0.15s" }}>Groups</a>
           </nav>
 
           {/* Desktop auth buttons */}
@@ -875,16 +875,6 @@ function HomeInner() {
               </div>
             )}
           </div>
-
-          {/* Stats */}
-          <div style={{ display: "flex", gap: isMobile ? 24 : 40, marginTop: 28, paddingLeft: 4 }}>
-            {[["248", "Active meets"], ["34", "Cities"], ["12k", "Enthusiasts"]].map(([num, label]) => (
-              <div key={label}>
-                <div style={{ fontSize: 24, fontWeight: 600 }}>{num}</div>
-                <div style={{ fontSize: 12, color: "#bbb", marginTop: 2 }}>{label}</div>
-              </div>
-            ))}
-          </div>
         </div>
       </section>
 
@@ -1005,7 +995,7 @@ function HomeInner() {
       {/* FOOTER */}
       <footer style={{ borderTop: "1px solid #ECEAE6", padding: 32, background: "#FAFAF9" }}>
         <div style={{ maxWidth: 1100, margin: "0 auto", display: "flex", justifyContent: "space-between", fontSize: 13, color: "#aaa" }}>
-          <span>&#169; {new Date().getFullYear()} Cruiser</span>
+          <span>&#169; {new Date().getFullYear()} Cruiser Meets</span>
           <div style={{ display: "flex", gap: 24 }}>
             {["Events", "Submit", "About"].map((l) => (
               <a key={l} href="#" style={{ color: "#aaa", textDecoration: "none" }}>{l}</a>

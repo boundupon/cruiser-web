@@ -14,21 +14,21 @@ const geistMono = Geist_Mono({
 export const metadata = {
   metadataBase: new URL("https://cruiser-web.vercel.app"),
   title: {
-    default: "Cruiser — Find car meets near you",
-    template: "%s | Cruiser",
+    default: "Cruiser Meets — Find car meets near you",
+    template: "%s | Cruiser Meets",
   },
   description: "Discover and host car meets, cruises, and shows near you. Join car clubs, build your garage, and connect with the community.",
   openGraph: {
-    title: "Cruiser — Find car meets near you",
+    title: "Cruiser Meets — Find car meets near you",
     description: "Discover and host car meets, cruises, and shows near you.",
     url: "https://cruiser-web.vercel.app",
-    siteName: "Cruiser",
+    siteName: "Cruiser Meets",
     images: ["/hero.jpg"],
     type: "website",
   },
   twitter: {
     card: "summary_large_image",
-    title: "Cruiser — Find car meets near you",
+    title: "Cruiser Meets — Find car meets near you",
     description: "Discover and host car meets, cruises, and shows near you.",
     images: ["/hero.jpg"],
   },

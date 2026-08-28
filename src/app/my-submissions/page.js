@@ -247,7 +247,10 @@ function PageShell({ children }) {
         .page { max-width: 720px; margin: 0 auto; padding: 48px 24px 80px; }
       `}</style>
       <nav className="nav">
-        <Link href="/" className="nav-logo">Cruiser</Link>
+        <Link href="/" className="nav-logo" style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <img src="/logo-mark.png" alt="" style={{ height: 22, width: "auto" }} />
+          Cruiser Meets
+        </Link>
         <Link href="/" style={{ fontSize: 13, color: "var(--muted)" }}>Back to meets</Link>
       </nav>
       <main className="page">{children}</main>

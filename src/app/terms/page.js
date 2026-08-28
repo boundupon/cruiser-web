@@ -5,7 +5,6 @@ const S = {
   header: { borderBottom: "1px solid #ECEAE6", background: "#FAFAF9", position: "sticky", top: 0, zIndex: 50 },
   headerInner: { maxWidth: 720, margin: "0 auto", padding: "0 20px", display: "flex", alignItems: "center", justifyContent: "space-between", height: 60 },
   logo: { display: "flex", alignItems: "center", gap: 10, textDecoration: "none" },
-  logoMark: { width: 32, height: 32, background: "#1a1a1a", borderRadius: 8, display: "grid", placeItems: "center", color: "white", fontWeight: 700, fontSize: 14 },
   logoText: { fontWeight: 600, fontSize: 15, color: "#1a1a1a" },
   back: { fontSize: 13, color: "#888", textDecoration: "none" },
   body: { maxWidth: 720, margin: "0 auto", padding: "40px 20px 96px" },
@@ -25,8 +24,8 @@ function Shell({ children }) {
       <header style={S.header}>
         <div style={S.headerInner}>
           <a href="/" style={S.logo}>
-            <div style={S.logoMark}>C</div>
-            <span style={S.logoText}>Cruiser</span>
+            <img src="/logo-mark.png" alt="Cruiser Meets" style={{ height: 28, width: "auto" }} />
+            <span style={S.logoText}>Cruiser Meets</span>
           </a>
           <a href="/" style={S.back}>Back to home</a>
         </div>
@@ -46,12 +45,12 @@ export default function TermsPage() {
       <h1 style={S.h1}>Terms of Service</h1>
       <div style={S.updated}>Last updated: August 25, 2026</div>
 
-      <h2 style={S.h2}>1. What Cruiser is</h2>
+      <h2 style={S.h2}>1. What Cruiser Meets is</h2>
       <p style={S.p}>
-        Cruiser is a listings and community platform for car meets, cruises, and related events ("Meets"). Cruiser helps people discover and post about Meets, and provides profile, garage, and discussion features for the car enthusiast community.
+        Cruiser Meets is a listings and community platform for car meets, cruises, and related events ("Meets"). Cruiser Meets helps people discover and post about Meets, and provides profile, garage, and discussion features for the car enthusiast community.
       </p>
       <p style={S.p}>
-        <strong>Cruiser does not organize, host, sponsor, verify, or guarantee any Meet.</strong> Meets are submitted by users and reviewed for basic completeness before being listed, but Cruiser does not confirm that a Meet will actually occur, that the listed details are accurate, or that the location is safe, permitted, or authorized. Attending, hosting, or interacting with anyone through a Meet listed on Cruiser is entirely at your own risk and discretion.
+        <strong>Cruiser Meets does not organize, host, sponsor, verify, or guarantee any Meet.</strong> Meets are submitted by users and reviewed for basic completeness before being listed, but Cruiser Meets does not confirm that a Meet will actually occur, that the listed details are accurate, or that the location is safe, permitted, or authorized. Attending, hosting, or interacting with anyone through a Meet listed on Cruiser Meets is entirely at your own risk and discretion.
       </p>
 
       <h2 style={S.h2}>2. Accounts</h2>
@@ -59,12 +58,12 @@ export default function TermsPage() {
         You need an account to submit Meets, comment, post, or build a profile. You're responsible for the activity on your account and for keeping your login credentials secure. You must provide an accurate email address, and you're responsible for anything posted from your account.
       </p>
       <p style={S.p}>
-        You must be at least <span style={S.placeholder}>13 years old</span> to use Cruiser. <span style={S.placeholder}>[Confirm the minimum age requirement and add any parental-consent language your legal reviewer recommends.]</span>
+        You must be at least <span style={S.placeholder}>13 years old</span> to use Cruiser Meets. <span style={S.placeholder}>[Confirm the minimum age requirement and add any parental-consent language your legal reviewer recommends.]</span>
       </p>
 
       <h2 style={S.h2}>3. Your content</h2>
       <p style={S.p}>
-        You retain ownership of the comments, posts, photos, vehicle information, and other content you submit ("User Content"). By posting User Content, you grant Cruiser a worldwide, non-exclusive, royalty-free license to host, display, and distribute it as part of operating the service.
+        You retain ownership of the comments, posts, photos, vehicle information, and other content you submit ("User Content"). By posting User Content, you grant Cruiser Meets a worldwide, non-exclusive, royalty-free license to host, display, and distribute it as part of operating the service.
       </p>
       <p style={S.p}>You agree not to post User Content that:</p>
       <ul style={S.ul}>
@@ -80,25 +79,25 @@ export default function TermsPage() {
 
       <h2 style={S.h2}>4. Meet submissions</h2>
       <p style={S.p}>
-        Submitted Meets are reviewed before appearing publicly, but review is a basic check, not a guarantee of accuracy, legality, or safety. Hosts are solely responsible for the events they list, including obtaining any permits, permissions, or insurance required. Cruiser may reject, edit, or remove a listing at any time.
+        Submitted Meets are reviewed before appearing publicly, but review is a basic check, not a guarantee of accuracy, legality, or safety. Hosts are solely responsible for the events they list, including obtaining any permits, permissions, or insurance required. Cruiser Meets may reject, edit, or remove a listing at any time.
       </p>
 
       <h2 style={S.h2}>5. Disclaimers</h2>
       <p style={S.p}>
-        Cruiser is provided "as is" without warranties of any kind. We don't guarantee the service will be uninterrupted, error-free, or secure. We are not responsible for the conduct of any user, host, or attendee, on or off the platform, or for anything that happens at a Meet listed on Cruiser.
+        Cruiser Meets is provided "as is" without warranties of any kind. We don't guarantee the service will be uninterrupted, error-free, or secure. We are not responsible for the conduct of any user, host, or attendee, on or off the platform, or for anything that happens at a Meet listed on Cruiser Meets.
       </p>
       <p style={S.p}>
-        To the fullest extent permitted by law, Cruiser and its operators are not liable for any indirect, incidental, or consequential damages arising from your use of the service or attendance at any Meet. <span style={S.placeholder}>[A legal reviewer should tailor this limitation-of-liability language to your jurisdiction.]</span>
+        To the fullest extent permitted by law, Cruiser Meets and its operators are not liable for any indirect, incidental, or consequential damages arising from your use of the service or attendance at any Meet. <span style={S.placeholder}>[A legal reviewer should tailor this limitation-of-liability language to your jurisdiction.]</span>
       </p>
 
       <h2 style={S.h2}>6. Termination</h2>
       <p style={S.p}>
-        You can stop using Cruiser and delete your account at any time. We may suspend or terminate accounts that violate these terms, including for repeated content violations.
+        You can stop using Cruiser Meets and delete your account at any time. We may suspend or terminate accounts that violate these terms, including for repeated content violations.
       </p>
 
       <h2 style={S.h2}>7. Changes to these terms</h2>
       <p style={S.p}>
-        We may update these terms as Cruiser evolves. Material changes will be reflected by updating the "Last updated" date above. Continuing to use Cruiser after changes take effect means you accept the updated terms.
+        We may update these terms as Cruiser Meets evolves. Material changes will be reflected by updating the "Last updated" date above. Continuing to use Cruiser Meets after changes take effect means you accept the updated terms.
       </p>
 
       <h2 style={S.h2}>8. Contact</h2>

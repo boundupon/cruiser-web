@@ -87,8 +87,8 @@ export default function SavedMeetsPage() {
         <div style={{ maxWidth: 1100, margin: "0 auto", padding: "0 20px", display: "flex", alignItems: "center", justifyContent: "space-between", height: 60 }}>
           <button onClick={() => router.push("/")}
             style={{ display: "flex", alignItems: "center", gap: 10, background: "none", border: "none", cursor: "pointer", padding: 0 }}>
-            <div style={{ width: 32, height: 32, background: "#1a1a1a", borderRadius: 8, display: "grid", placeItems: "center", color: "white", fontWeight: 700, fontSize: 14 }}>C</div>
-            <span style={{ fontWeight: 600, fontSize: 15, color: "#1a1a1a" }}>Cruiser</span>
+            <img src="/logo-mark.png" alt="Cruiser Meets" style={{ height: 28, width: "auto" }} />
+            <span style={{ fontWeight: 600, fontSize: 15, color: "#1a1a1a" }}>Cruiser Meets</span>
           </button>
           <div style={{ display: "flex", gap: 8 }}>
             <button onClick={() => router.push("/")}

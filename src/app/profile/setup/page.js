@@ -172,8 +172,8 @@ export default function ProfileSetupPage() {
       <header style={{ borderBottom: "1px solid #ECEAE6", background: "#FAFAF9", position: "sticky", top: 0, zIndex: 50 }}>
         <div style={{ maxWidth: 860, margin: "0 auto", padding: "0 20px", display: "flex", alignItems: "center", height: 60 }}>
           <a href="/" style={{ display: "flex", alignItems: "center", gap: 10, textDecoration: "none" }}>
-            <div style={{ width: 32, height: 32, background: "#1a1a1a", borderRadius: 8, display: "grid", placeItems: "center", color: "white", fontWeight: 700, fontSize: 14 }}>C</div>
-            <span style={{ fontWeight: 600, fontSize: 15, color: "#1a1a1a" }}>Cruiser</span>
+            <img src="/logo-mark.png" alt="Cruiser Meets" style={{ height: 28, width: "auto" }} />
+            <span style={{ fontWeight: 600, fontSize: 15, color: "#1a1a1a" }}>Cruiser Meets</span>
           </a>
         </div>
       </header>
@@ -184,7 +184,7 @@ export default function ProfileSetupPage() {
           <div style={{ fontSize: 40, marginBottom: 12 }}>🚗</div>
           <h1 style={{ fontSize: isMobile ? 24 : 28, fontWeight: 700, margin: "0 0 10px" }}>Choose your username</h1>
           <p style={{ fontSize: 15, color: "#888", margin: 0, lineHeight: 1.6 }}>
-            This is your unique identity on Cruiser.<br />You can fill in the rest of your profile later.
+            This is your unique identity on Cruiser Meets.<br />You can fill in the rest of your profile later.
           </p>
         </div>
 

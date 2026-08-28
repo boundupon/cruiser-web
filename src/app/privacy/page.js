@@ -5,7 +5,6 @@ const S = {
   header: { borderBottom: "1px solid #ECEAE6", background: "#FAFAF9", position: "sticky", top: 0, zIndex: 50 },
   headerInner: { maxWidth: 720, margin: "0 auto", padding: "0 20px", display: "flex", alignItems: "center", justifyContent: "space-between", height: 60 },
   logo: { display: "flex", alignItems: "center", gap: 10, textDecoration: "none" },
-  logoMark: { width: 32, height: 32, background: "#1a1a1a", borderRadius: 8, display: "grid", placeItems: "center", color: "white", fontWeight: 700, fontSize: 14 },
   logoText: { fontWeight: 600, fontSize: 15, color: "#1a1a1a" },
   back: { fontSize: 13, color: "#888", textDecoration: "none" },
   body: { maxWidth: 720, margin: "0 auto", padding: "40px 20px 96px" },
@@ -28,8 +27,8 @@ function Shell({ children }) {
       <header style={S.header}>
         <div style={S.headerInner}>
           <a href="/" style={S.logo}>
-            <div style={S.logoMark}>C</div>
-            <span style={S.logoText}>Cruiser</span>
+            <img src="/logo-mark.png" alt="Cruiser Meets" style={{ height: 28, width: "auto" }} />
+            <span style={S.logoText}>Cruiser Meets</span>
           </a>
           <a href="/" style={S.back}>Back to home</a>
         </div>
@@ -93,14 +92,14 @@ export default function PrivacyPage() {
       <p style={S.p}>We do not sell your personal information.</p>
 
       <h2 style={S.h2}>3. Who we share it with</h2>
-      <p style={S.p}>We use a small number of service providers to run Cruiser, who process data on our behalf:</p>
+      <p style={S.p}>We use a small number of service providers to run Cruiser Meets, who process data on our behalf:</p>
       <ul style={S.ul}>
         <li><strong>Supabase</strong> — authentication, database, and file storage for photos and other media</li>
         <li><strong>Google</strong> — if you choose to sign in with Google</li>
         <li><strong>OpenStreetMap / Nominatim</strong> — converts the city, zip, or address you enter into map coordinates</li>
       </ul>
       <p style={S.p}>
-        Your username, profile info, comments, posts, and vehicle info are visible to other users and, in most cases, to anyone visiting the site — Cruiser profiles and Meet listings are public by design. We don't share your email address publicly.
+        Your username, profile info, comments, posts, and vehicle info are visible to other users and, in most cases, to anyone visiting the site — Cruiser Meets profiles and Meet listings are public by design. We don't share your email address publicly.
       </p>
 
       <h2 style={S.h2}>4. Your choices</h2>
@@ -117,7 +116,7 @@ export default function PrivacyPage() {
 
       <h2 style={S.h2}>6. Children's privacy</h2>
       <p style={S.p}>
-        Cruiser is not directed at children under 13, and we don't knowingly collect information from them. <span style={S.placeholder}>[Confirm this age threshold matches your Terms of Service and any applicable law.]</span>
+        Cruiser Meets is not directed at children under 13, and we don't knowingly collect information from them. <span style={S.placeholder}>[Confirm this age threshold matches your Terms of Service and any applicable law.]</span>
       </p>
 
       <h2 style={S.h2}>7. Security</h2>
@@ -127,7 +126,7 @@ export default function PrivacyPage() {
 
       <h2 style={S.h2}>8. Changes to this policy</h2>
       <p style={S.p}>
-        We may update this policy as Cruiser evolves. Material changes will be reflected by updating the "Last updated" date above.
+        We may update this policy as Cruiser Meets evolves. Material changes will be reflected by updating the "Last updated" date above.
       </p>
 
       <h2 style={S.h2}>9. Contact</h2>

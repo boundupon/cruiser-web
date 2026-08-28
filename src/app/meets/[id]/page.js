@@ -12,7 +12,7 @@ export async function generateMetadata({ params }) {
     const title = meet.title || "Car Meet";
     const description = [meet.event_type, meet.city, meet.date]
       .filter(Boolean)
-      .join(" · ") || "Car meet on Cruiser";
+      .join(" · ") || "Car meet on Cruiser Meets";
     const images = meet.photo_url ? [meet.photo_url] : ["/hero.jpg"];
 
     return {

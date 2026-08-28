@@ -40,7 +40,7 @@ export default function AuthCallbackPage() {
   return (
     <div style={{ minHeight: "100vh", background: "#FAFAF9", display: "grid", placeItems: "center", fontFamily: "'DM Sans', sans-serif" }}>
       <div style={{ textAlign: "center" }}>
-        <div style={{ width: 32, height: 32, background: "#1a1a1a", borderRadius: 8, display: "grid", placeItems: "center", color: "white", fontWeight: 700, fontSize: 14, margin: "0 auto 16px" }}>C</div>
+        <img src="/logo-mark.png" alt="Cruiser Meets" style={{ height: 32, width: "auto", margin: "0 auto 16px" }} />
         <div style={{ color: "#bbb", fontSize: 14 }}>Signing you in...</div>
       </div>
     </div>
