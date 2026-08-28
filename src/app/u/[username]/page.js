@@ -34,12 +34,199 @@ function StarRating({ value }) {
   );
 }
 
+function timeAgoShort(iso) {
+  const diff = Date.now() - new Date(iso).getTime();
+  const mins = Math.floor(diff / 60000);
+  if (mins < 1) return "just now";
+  if (mins < 60) return `${mins}m ago`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return `${hrs}h ago`;
+  const days = Math.floor(hrs / 24);
+  if (days < 7) return `${days}d ago`;
+  return new Date(iso).toLocaleDateString(undefined, { month: "short", day: "numeric" });
+}
+
+function CommentThread({ contentType, contentId, currentUser, myUsername, myPhotoUrl, router }) {
+  const [comments, setComments] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [body, setBody] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const [replyingTo, setReplyingTo] = useState(null);
+  const [replyBody, setReplyBody] = useState("");
+  const [expandedReplies, setExpandedReplies] = useState(new Set());
+
+  useEffect(() => {
+    let cancelled = false;
+    async function load() {
+      setLoading(true);
+      try {
+        const res = await fetch(`${API_BASE}/profile-comments?content_type=${contentType}&content_id=${contentId}`);
+        const data = await res.json();
+        if (!cancelled) setComments(Array.isArray(data) ? data : []);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }
+    load();
+    return () => { cancelled = true; };
+  }, [contentType, contentId]);
+
+  async function getToken() {
+    const { data: { session } } = await supabase.auth.getSession();
+    return session?.access_token;
+  }
+
+  async function handleSubmit(e) {
+    e.preventDefault();
+    if (!currentUser) { router.push(`/`); return; }
+    if (!body.trim()) return;
+    setSubmitting(true);
+    try {
+      const token = await getToken();
+      const res = await fetch(`${API_BASE}/profile-comments`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ content_type: contentType, content_id: contentId, body: body.trim(), username: myUsername }),
+      });
+      if (!res.ok) throw new Error("Failed");
+      const data = await res.json();
+      setComments(prev => [...prev, { ...data, profile_photo_url: myPhotoUrl }]);
+      setBody("");
+    } catch (e) { console.error(e); }
+    finally { setSubmitting(false); }
+  }
+
+  async function handleReplySubmit(parentId) {
+    if (!replyBody.trim()) return;
+    try {
+      const token = await getToken();
+      const res = await fetch(`${API_BASE}/profile-comments/${parentId}/replies`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ content_type: contentType, content_id: contentId, body: replyBody.trim(), username: myUsername }),
+      });
+      if (!res.ok) throw new Error("Failed");
+      const data = await res.json();
+      setComments(prev => [...prev, { ...data, profile_photo_url: myPhotoUrl }]);
+      setReplyBody(""); setReplyingTo(null);
+      setExpandedReplies(prev => new Set([...prev, parentId]));
+    } catch (e) { console.error(e); }
+  }
+
+  async function handleDelete(id) {
+    try {
+      const token = await getToken();
+      const res = await fetch(`${API_BASE}/profile-comments/${id}`, { method: "DELETE", headers: { Authorization: `Bearer ${token}` } });
+      if (res.ok) setComments(prev => prev.filter(c => c.id !== id));
+    } catch (e) { console.error(e); }
+  }
+
+  const topLevel = comments.filter(c => !c.parent_id);
+  const getReplies = pid => comments.filter(c => c.parent_id === pid);
+  const inp = { flex: 1, border: "1.5px solid #E8E8E4", borderRadius: 8, padding: "8px 12px", fontSize: 13, fontFamily: "inherit", outline: "none" };
+
+  return (
+    <div>
+      {currentUser ? (
+        <form onSubmit={handleSubmit} style={{ display: "flex", gap: 8, marginBottom: 14 }}>
+          <input value={body} onChange={e => setBody(e.target.value)} placeholder="Write a comment..." style={inp} />
+          <button type="submit" disabled={submitting || !body.trim()}
+            style={{ background: "#1a1a1a", color: "white", border: "none", borderRadius: 8, padding: "8px 16px", fontSize: 13, fontWeight: 500, cursor: "pointer", opacity: submitting || !body.trim() ? 0.5 : 1 }}>
+            Send
+          </button>
+        </form>
+      ) : (
+        <div style={{ fontSize: 12, color: "#aaa", marginBottom: 14 }}>Sign in to comment.</div>
+      )}
+      {loading ? (
+        <div style={{ fontSize: 13, color: "#bbb", textAlign: "center", padding: "8px 0" }}>Loading...</div>
+      ) : topLevel.length === 0 ? (
+        <div style={{ fontSize: 13, color: "#bbb", textAlign: "center", padding: "8px 0" }}>No comments yet.</div>
+      ) : topLevel.map(c => {
+        const replies = getReplies(c.id);
+        const repliesExpanded = expandedReplies.has(c.id);
+        return (
+          <div key={c.id} style={{ marginBottom: 10 }}>
+            <div style={{ display: "flex", gap: 10 }}>
+              <button onClick={() => router.push(`/u/${c.username}`)} style={{ background: "none", border: "none", padding: 0, cursor: "pointer", flexShrink: 0 }}>
+                {c.profile_photo_url
+                  ? <img src={c.profile_photo_url} alt="" style={{ width: 26, height: 26, borderRadius: "50%", objectFit: "cover" }} />
+                  : <div style={{ width: 26, height: 26, background: "#E8E8E4", borderRadius: "50%", display: "grid", placeItems: "center", color: "#555", fontSize: 10, fontWeight: 600 }}>{(c.username || "?")[0].toUpperCase()}</div>
+                }
+              </button>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
+                  <button onClick={() => router.push(`/u/${c.username}`)} style={{ background: "none", border: "none", padding: 0, cursor: "pointer", fontSize: 12, fontWeight: 600, color: "#1a1a1a", fontFamily: "inherit" }}>{c.username}</button>
+                  <span style={{ fontSize: 11, color: "#bbb" }}>{timeAgoShort(c.created_at)}</span>
+                </div>
+                <p style={{ fontSize: 13, color: "#333", margin: "2px 0 4px", lineHeight: 1.5, wordBreak: "break-word" }}>{c.body}</p>
+                <div style={{ display: "flex", gap: 12 }}>
+                  {currentUser && (
+                    <button onClick={() => replyingTo?.id === c.id ? setReplyingTo(null) : (setReplyingTo({ id: c.id, username: c.username }), setReplyBody(`@${c.username} `))}
+                      style={{ background: "none", border: "none", padding: 0, cursor: "pointer", color: "#aaa", fontSize: 11, fontWeight: 500 }}>Reply</button>
+                  )}
+                  {replies.length > 0 && (
+                    <button onClick={() => setExpandedReplies(prev => { const n = new Set(prev); n.has(c.id) ? n.delete(c.id) : n.add(c.id); return n; })}
+                      style={{ background: "none", border: "none", padding: 0, cursor: "pointer", color: "#666", fontSize: 11, fontWeight: 500 }}>
+                      {repliesExpanded ? "Hide" : "View"} {replies.length} {replies.length === 1 ? "reply" : "replies"}
+                    </button>
+                  )}
+                  {currentUser?.id === c.user_id && (
+                    <button onClick={() => handleDelete(c.id)} style={{ background: "none", border: "none", padding: 0, cursor: "pointer", color: "#ccc", fontSize: 11 }}>Delete</button>
+                  )}
+                </div>
+                {replyingTo?.id === c.id && (
+                  <div style={{ marginTop: 8, display: "flex", gap: 8 }}>
+                    <input autoFocus value={replyBody} onChange={e => setReplyBody(e.target.value)}
+                      style={{ ...inp, fontSize: 12 }}
+                      onKeyDown={e => { if (e.key === "Enter") handleReplySubmit(c.id); }} />
+                    <button onClick={() => handleReplySubmit(c.id)} disabled={!replyBody.trim()}
+                      style={{ background: "#1a1a1a", color: "white", border: "none", borderRadius: 6, padding: "6px 12px", fontSize: 12, cursor: "pointer", opacity: !replyBody.trim() ? 0.5 : 1 }}>
+                      Reply
+                    </button>
+                  </div>
+                )}
+                {repliesExpanded && replies.length > 0 && (
+                  <div style={{ marginTop: 8, marginLeft: 10, borderLeft: "2px solid #F0EFEB", paddingLeft: 12, display: "flex", flexDirection: "column", gap: 8 }}>
+                    {replies.map(r => (
+                      <div key={r.id} style={{ display: "flex", gap: 8 }}>
+                        <button onClick={() => router.push(`/u/${r.username}`)} style={{ background: "none", border: "none", padding: 0, cursor: "pointer", flexShrink: 0 }}>
+                          {r.profile_photo_url
+                            ? <img src={r.profile_photo_url} alt="" style={{ width: 20, height: 20, borderRadius: "50%", objectFit: "cover" }} />
+                            : <div style={{ width: 20, height: 20, background: "#E8E8E4", borderRadius: "50%", display: "grid", placeItems: "center", color: "#555", fontSize: 9, fontWeight: 600 }}>{(r.username || "?")[0].toUpperCase()}</div>
+                          }
+                        </button>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ display: "flex", alignItems: "baseline", gap: 6 }}>
+                            <button onClick={() => router.push(`/u/${r.username}`)} style={{ background: "none", border: "none", padding: 0, cursor: "pointer", fontSize: 11, fontWeight: 600, color: "#1a1a1a", fontFamily: "inherit" }}>{r.username}</button>
+                            <span style={{ fontSize: 10, color: "#bbb" }}>{timeAgoShort(r.created_at)}</span>
+                          </div>
+                          <p style={{ fontSize: 12, color: "#333", margin: "1px 0", lineHeight: 1.5, wordBreak: "break-word" }}>{r.body}</p>
+                          {currentUser?.id === r.user_id && (
+                            <button onClick={() => handleDelete(r.id)} style={{ background: "none", border: "none", padding: 0, cursor: "pointer", color: "#ccc", fontSize: 10 }}>Delete</button>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 export default function ProfilePage() {
   const params = useParams();
   const router = useRouter();
   const username = params?.username;
 
   const [currentUser, setCurrentUser] = useState(null);
+  const [myUsername, setMyUsername] = useState(null);
+  const [myPhotoUrl, setMyPhotoUrl] = useState(null);
   const [profile, setProfile] = useState(null);
   const [vehicles, setVehicles] = useState([]);
   const [mods, setMods] = useState([]);
@@ -51,6 +238,7 @@ export default function ProfilePage() {
   const [lightboxPost, setLightboxPost] = useState(null);
   const [isMobile, setIsMobile] = useState(false);
   const [reportedKeys, setReportedKeys] = useState(new Set());
+  const [expandedModComments, setExpandedModComments] = useState(new Set());
 
   useEffect(() => {
     const check = () => setIsMobile(window.innerWidth < 768);
@@ -60,7 +248,15 @@ export default function ProfilePage() {
   }, []);
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => setCurrentUser(session?.user ?? null));
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setCurrentUser(session?.user ?? null);
+      if (session?.access_token) {
+        fetch(`${API_BASE}/profile/me`, { headers: { Authorization: `Bearer ${session.access_token}` } })
+          .then(res => res.ok ? res.json() : null)
+          .then(p => { if (p?.username) setMyUsername(p.username); if (p?.profile_photo_url) setMyPhotoUrl(p.profile_photo_url); })
+          .catch(() => {});
+      }
+    });
   }, []);
 
   useEffect(() => {
@@ -331,6 +527,11 @@ export default function ProfilePage() {
                     </div>
                     {selectedVehicle.is_primary && <span style={{ fontSize: 10, background: "#1a1a1a", color: "white", borderRadius: 100, padding: "3px 10px", fontWeight: 600, letterSpacing: "0.06em", textTransform: "uppercase" }}>Primary</span>}
                   </div>
+                  <div style={{ borderTop: "1px solid #F0EFEB", padding: "16px 20px" }}>
+                    <div style={{ fontSize: 11, color: "#aaa", textTransform: "uppercase", letterSpacing: "0.08em", fontWeight: 600, marginBottom: 12 }}>Comments</div>
+                    <CommentThread contentType="vehicle" contentId={selectedVehicle.id}
+                      currentUser={currentUser} myUsername={myUsername} myPhotoUrl={myPhotoUrl} router={router} />
+                  </div>
                 </div>
               )}
 
@@ -348,16 +549,31 @@ export default function ProfilePage() {
                     <div key={cat}>
                       <div style={{ fontSize: 10, color: "#aaa", textTransform: "uppercase", letterSpacing: "0.09em", fontWeight: 700, marginBottom: 8 }}>{cat}</div>
                       <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                        {items.map((mod) => (
-                          <div key={mod.id} style={{ background: "white", border: "1.5px solid #E8E8E4", borderRadius: 10, padding: "13px 16px", display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 12 }}>
-                            <div style={{ flex: 1 }}>
-                              <div style={{ fontSize: 14, fontWeight: 600, marginBottom: mod.brand ? 3 : 0 }}>{mod.mod_name}</div>
-                              {mod.brand && <div style={{ fontSize: 12, color: "#888" }}>{mod.brand}</div>}
-                              {mod.notes && <div style={{ fontSize: 12, color: "#aaa", marginTop: 3 }}>{mod.notes}</div>}
+                        {items.map((mod) => {
+                          const modOpen = expandedModComments.has(mod.id);
+                          return (
+                          <div key={mod.id} style={{ background: "white", border: "1.5px solid #E8E8E4", borderRadius: 10, padding: "13px 16px" }}>
+                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 12 }}>
+                              <div style={{ flex: 1 }}>
+                                <div style={{ fontSize: 14, fontWeight: 600, marginBottom: mod.brand ? 3 : 0 }}>{mod.mod_name}</div>
+                                {mod.brand && <div style={{ fontSize: 12, color: "#888" }}>{mod.brand}</div>}
+                                {mod.notes && <div style={{ fontSize: 12, color: "#aaa", marginTop: 3 }}>{mod.notes}</div>}
+                              </div>
+                              {mod.install_date && <div style={{ fontSize: 11, color: "#bbb", whiteSpace: "nowrap", flexShrink: 0 }}>{new Date(mod.install_date).toLocaleDateString(undefined, { year: "numeric", month: "short" })}</div>}
                             </div>
-                            {mod.install_date && <div style={{ fontSize: 11, color: "#bbb", whiteSpace: "nowrap", flexShrink: 0 }}>{new Date(mod.install_date).toLocaleDateString(undefined, { year: "numeric", month: "short" })}</div>}
+                            <button onClick={() => setExpandedModComments(prev => { const n = new Set(prev); n.has(mod.id) ? n.delete(mod.id) : n.add(mod.id); return n; })}
+                              style={{ background: "none", border: "none", padding: 0, marginTop: 8, cursor: "pointer", color: "#888", fontSize: 12, fontWeight: 500 }}>
+                              {modOpen ? "Hide comments" : "Comments"}
+                            </button>
+                            {modOpen && (
+                              <div style={{ marginTop: 12, borderTop: "1px solid #F0EFEB", paddingTop: 12 }}>
+                                <CommentThread contentType="mod" contentId={mod.id}
+                                  currentUser={currentUser} myUsername={myUsername} myPhotoUrl={myPhotoUrl} router={router} />
+                              </div>
+                            )}
                           </div>
-                        ))}
+                          );
+                        })}
                       </div>
                     </div>
                   ))}
@@ -413,7 +629,7 @@ export default function ProfilePage() {
       {/* LIGHTBOX */}
       {lightboxPost && (
         <div onClick={() => setLightboxPost(null)} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.88)", zIndex: 200, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
-          <div onClick={(e) => e.stopPropagation()} style={{ background: "white", borderRadius: 16, overflow: "hidden", maxWidth: 560, width: "100%", maxHeight: "90vh", display: "flex", flexDirection: "column" }}>
+          <div onClick={(e) => e.stopPropagation()} style={{ background: "white", borderRadius: 16, overflow: "hidden auto", maxWidth: 560, width: "100%", maxHeight: "90vh", display: "flex", flexDirection: "column" }}>
             {lightboxPost.media_type === "video"
               ? <video src={lightboxPost.media_url} controls style={{ width: "100%", maxHeight: 420, objectFit: "contain", background: "#000" }} />
               : <img src={lightboxPost.media_url} alt="" style={{ width: "100%", maxHeight: 480, objectFit: "contain", background: "#000" }} />
@@ -430,6 +646,11 @@ export default function ProfilePage() {
                 )}
                 <button onClick={() => setLightboxPost(null)} style={{ background: "none", border: "1.5px solid #E8E8E4", borderRadius: 8, padding: "6px 14px", fontSize: 13, cursor: "pointer", color: "#555", fontFamily: "inherit" }}>Close</button>
               </div>
+            </div>
+            <div style={{ borderTop: "1px solid #F0EFEB", padding: "16px 20px" }}>
+              <div style={{ fontSize: 11, color: "#aaa", textTransform: "uppercase", letterSpacing: "0.08em", fontWeight: 600, marginBottom: 12 }}>Comments</div>
+              <CommentThread contentType="post" contentId={lightboxPost.id}
+                currentUser={currentUser} myUsername={myUsername} myPhotoUrl={myPhotoUrl} router={router} />
             </div>
           </div>
         </div>
