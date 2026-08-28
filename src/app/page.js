@@ -103,8 +103,13 @@ function HomeInner() {
   // Responsive
   const [isMobile, setIsMobile] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [profileMenuOpen, setProfileMenuOpen] = useState(false);
   useEffect(() => {
-    const check = () => setIsMobile(window.innerWidth < 768);
+    const check = () => {
+      const mobile = window.innerWidth < 768;
+      setIsMobile(mobile);
+      if (!mobile) setMenuOpen(false);
+    };
     check();
     window.addEventListener("resize", check);
     return () => window.removeEventListener("resize", check);
@@ -504,43 +509,58 @@ function HomeInner() {
           </nav>
 
           {/* Desktop auth buttons */}
-          <div className="desktop-auth" style={{ display: "flex", gap: 8, alignItems: "center" }}>
+          <div className="desktop-auth" style={{ display: "flex", gap: 6, alignItems: "center" }}>
             {user ? (
               <>
-                {user && (
-                  <>
-                    <a href="/messages" style={{ fontSize: 14, color: "#888", textDecoration: "none", display: "flex", alignItems: "center", gap: 5 }}>
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path></svg>
-                      Messages
-                    </a>
-                    <a href="/saved" style={{ fontSize: 14, color: "#888", textDecoration: "none", display: "flex", alignItems: "center", gap: 5 }}>
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="#E11D48" stroke="#E11D48" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg>
-                      Saved
-                    </a>
-                  </>
-                )}
-                {profileUsername ? (
-                  <a href={`/u/${profileUsername}`}
-                    style={{ display: "flex", alignItems: "center", gap: 7, textDecoration: "none", background: "none", border: "1.5px solid #E0E0DC", borderRadius: 8, padding: "8px 14px", fontSize: 14, color: "#555", cursor: "pointer" }}>
+                <a href="/messages" title="Messages"
+                  style={{ display: "grid", placeItems: "center", width: 34, height: 34, borderRadius: 8, color: "#888" }}
+                  onMouseEnter={e => e.currentTarget.style.background = "#F0EFEB"} onMouseLeave={e => e.currentTarget.style.background = "transparent"}>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path></svg>
+                </a>
+                <a href="/saved" title="Saved meets"
+                  style={{ display: "grid", placeItems: "center", width: 34, height: 34, borderRadius: 8 }}
+                  onMouseEnter={e => e.currentTarget.style.background = "#F0EFEB"} onMouseLeave={e => e.currentTarget.style.background = "transparent"}>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="#E11D48" stroke="#E11D48" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg>
+                </a>
+
+                <div style={{ width: 1, height: 22, background: "#E8E8E4", margin: "0 4px" }} />
+
+                <div style={{ position: "relative" }}>
+                  <button onClick={() => setProfileMenuOpen(o => !o)}
+                    style={{ display: "flex", alignItems: "center", gap: 7, textDecoration: "none", background: "none", border: "1.5px solid #E0E0DC", borderRadius: 8, padding: "7px 12px", fontSize: 14, color: "#555", cursor: "pointer", fontFamily: "inherit" }}>
                     {profilePhotoUrl ? (
                       <img src={profilePhotoUrl} alt="" style={{ width: 20, height: 20, borderRadius: "50%", objectFit: "cover", flexShrink: 0 }} />
                     ) : (
                       <div style={{ width: 20, height: 20, borderRadius: "50%", background: "#1a1a1a", display: "grid", placeItems: "center", color: "white", fontSize: 10, fontWeight: 700, flexShrink: 0 }}>
-                        {(profileUsername || "?")[0].toUpperCase()}
+                        {(profileUsername || user.email || "?")[0].toUpperCase()}
                       </div>
                     )}
-                    {profileUsername}
-                  </a>
-                ) : (
-                  <a href="/profile/setup"
-                    style={{ fontSize: 13, color: "#888", border: "1.5px solid #E0E0DC", borderRadius: 8, padding: "7px 14px", textDecoration: "none" }}>
-                    Set up profile
-                  </a>
-                )}
-                <button onClick={() => supabase.auth.signOut()}
-                  style={{ background: "none", border: "1.5px solid #E0E0DC", borderRadius: 8, padding: "8px 16px", fontSize: 14, color: "#555", cursor: "pointer" }}>
-                  Sign out
-                </button>
+                    {profileUsername || "Account"}
+                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#aaa" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ transform: profileMenuOpen ? "rotate(180deg)" : "none", transition: "transform 0.15s" }}><polyline points="6 9 12 15 18 9"></polyline></svg>
+                  </button>
+                  {profileMenuOpen && (
+                    <>
+                      <div onClick={() => setProfileMenuOpen(false)} style={{ position: "fixed", inset: 0, zIndex: 90 }} />
+                      <div style={{ position: "absolute", top: "calc(100% + 6px)", right: 0, background: "white", border: "1.5px solid #E8E8E4", borderRadius: 10, boxShadow: "0 8px 24px rgba(0,0,0,0.1)", minWidth: 170, zIndex: 100, overflow: "hidden" }}>
+                        {profileUsername ? (
+                          <a href={`/u/${profileUsername}`} onClick={() => setProfileMenuOpen(false)}
+                            style={{ display: "block", padding: "10px 14px", fontSize: 13, color: "#1a1a1a", textDecoration: "none" }}>
+                            View Profile
+                          </a>
+                        ) : (
+                          <a href="/profile/setup" onClick={() => setProfileMenuOpen(false)}
+                            style={{ display: "block", padding: "10px 14px", fontSize: 13, color: "#1a1a1a", textDecoration: "none" }}>
+                            Set up profile
+                          </a>
+                        )}
+                        <button onClick={() => { supabase.auth.signOut(); setProfileMenuOpen(false); }}
+                          style={{ display: "block", width: "100%", textAlign: "left", padding: "10px 14px", fontSize: 13, color: "#DC2626", background: "none", border: "none", borderTop: "1px solid #F0EFEB", cursor: "pointer", fontFamily: "inherit" }}>
+                          Sign out
+                        </button>
+                      </div>
+                    </>
+                  )}
+                </div>
               </>
             ) : (
               <>
@@ -585,23 +605,20 @@ function HomeInner() {
             <a href="#">About</a>
             {user ? (
               <>
-                {user && (
-                  <>
-                    <a href="/saved" style={{ fontSize: 14, color: "#888", textDecoration: "none", display: "flex", alignItems: "center", gap: 5 }}>
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="#E11D48" stroke="#E11D48" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg>
-                      Saved
-                    </a>
-                  </>
-                )}
-                {profileUsername ? (
-                  <a href={`/u/${profileUsername}`} onClick={() => setMenuOpen(false)}>👤 My Profile</a>
-                ) : (
-                  <a href="/profile/setup" onClick={() => setMenuOpen(false)}>Set up profile</a>
-                )}
+                <a href={profileUsername ? `/u/${profileUsername}` : "/profile/setup"} onClick={() => setMenuOpen(false)}
+                  style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                  {profilePhotoUrl ? (
+                    <img src={profilePhotoUrl} alt="" style={{ width: 28, height: 28, borderRadius: "50%", objectFit: "cover", flexShrink: 0 }} />
+                  ) : (
+                    <div style={{ width: 28, height: 28, borderRadius: "50%", background: "#1a1a1a", display: "grid", placeItems: "center", color: "white", fontSize: 12, fontWeight: 700, flexShrink: 0 }}>
+                      {(profileUsername || user.email || "?")[0].toUpperCase()}
+                    </div>
+                  )}
+                  {profileUsername || "Set up profile"}
+                </a>
                 <a href="/messages" onClick={() => setMenuOpen(false)}>Messages</a>
                 <a href="/saved" onClick={() => setMenuOpen(false)}>Saved Meets</a>
-                <span style={{ fontSize: 13, color: "#888", padding: "14px 0", borderBottom: "1px solid #F0EFEB" }}>{user.email?.split("@")[0]}</span>
-                <button onClick={() => { supabase.auth.signOut(); setMenuOpen(false); }}>Sign out</button>
+                <button onClick={() => { supabase.auth.signOut(); setMenuOpen(false); }} style={{ color: "#DC2626" }}>Sign out</button>
               </>
             ) : (
               <>
@@ -618,14 +635,14 @@ function HomeInner() {
         <div style={{ position: "absolute", inset: 0, backgroundImage: "url('/hero.jpg')", backgroundSize: "cover", backgroundPosition: "center 45%" }} />
         <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to bottom, rgba(0,0,0,0.2) 0%, rgba(0,0,0,0.35) 50%, rgba(250,250,249,0.9) 90%, #FAFAF9 100%)" }} />
         <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center", textAlign: "center", padding: "0 20px" }}>
-          <h1 style={{ fontSize: isMobile ? 32 : 56, fontWeight: 300, lineHeight: 1.08, letterSpacing: "-0.02em", margin: 0, color: "white", textShadow: "0 2px 24px rgba(0,0,0,0.35)" }}>
+          <h1 style={{ fontSize: "clamp(32px, 6vw, 56px)", fontWeight: 300, lineHeight: 1.08, letterSpacing: "-0.02em", margin: 0, color: "white", textShadow: "0 2px 24px rgba(0,0,0,0.35)" }}>
             Find <span style={{ fontWeight: 700 }}>car meets</span> near you.
           </h1>
         </div>
       </section>
 
       {/* SEARCH PANEL */}
-      <section style={{ background: "#FAFAF9", padding: isMobile ? "0 16px 32px" : "0 32px 48px" }}>
+      <section style={{ background: "#FAFAF9", padding: isMobile ? "32px 16px 32px" : "48px 32px 48px" }}>
         <div style={{ maxWidth: 860, margin: "0 auto" }}>
 
           {/* Toggle */}
